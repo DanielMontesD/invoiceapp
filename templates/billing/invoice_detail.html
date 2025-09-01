@@ -3,6 +3,8 @@
 {% block content %}
 <h1>Invoice {{ invoice.invoice_number }}</h1>
 
+<p><strong>Employee:</strong> {{ invoice.employee|default:"—" }}</p>
+<p class="muted">{{ invoice.client_email }}</p> 
 <p><strong>Client:</strong> {{ invoice.client_name }} ({{ invoice.client_email }})</p>
 <p><strong>Period:</strong> {{ invoice.period_start }} → {{ invoice.period_end }} ({{ invoice.get_period_type_display }})</p>
 <p><strong>Issued:</strong> {{ invoice.date_issued }}</p>
