@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Invoice List{% endblock %}
+{% block content %}
+<h1>Invoices</h1>
+<table>
+  <thead>
+    <tr>
+      <th>#</th><th>Client</th><th>Period</th><th>Hours</th><th>Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for inv in invoices %}
+      <tr>
+        <td><a href="{% url 'invoice_detail' inv.pk %}">{{ inv.invoice_number }}</a></td>
+        <td>{{ inv.client_name }}</td>
+        <td>{{ inv.period_start }} → {{ inv.period_end }} ({{ inv.get_period_type_display }})</td>
+        <td>{{ inv.total_hours }}</td>
+        <td>${{ inv.total_amount }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5">No invoices yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>{% block title %}Invoices{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; margin: 2rem; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { padding: .5rem; border-bottom: 1px solid #ddd; text-align: left; }
+    a.btn, button.btn { display: inline-block; padding: .45rem .7rem; border: 1px solid #222; text-decoration: none; background:#fff; cursor:pointer; }
+    header { margin-bottom: 1rem; display:flex; gap:.5rem; }
+  </style>
+</head>
+<body>
+  <header>
+<header>
+  <a class="btn" href="{% url 'invoice_list' %}">Invoices</a>
+  <a class="btn" href="{% url 'invoice_create' %}">New Invoice</a>
+</header>
+  </header>
+
+  {% if messages %}
+    <ul>
+      {% for m in messages %}<li>{{ m }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+
+<script>
+(function(){
+  // Helpers de fecha (JS usa meses 0-11)
+  function fmt(d){ return d.toISOString().slice(0,10); } // YYYY-MM-DD
+
+  function mondayOf(d){
+    // getDay(): 0=Sun,1=Mon,...6=Sat  -> queremos Lunes
+    const day = d.getDay();                 // 0..6
+    const offset = (day === 0 ? -6 : 1 - day); // si es domingo, retrocede 6; si no, hasta lunes
+    const m = new Date(d);
+    m.setDate(d.getDate() + offset);
+    return m;
+  }
+
+  function endOfMonth(d){
+    return new Date(d.getFullYear(), d.getMonth() + 1, 0); // día 0 del mes siguiente = último día del actual
+  }
+
+  const sel = document.getElementById("id_period_type");
+  const start = document.getElementById("id_period_start");
+  const end = document.getElementById("id_period_end");
+
+  if (!sel || !start || !end) return;
+
+  sel.addEventListener("change", function(){
+    const today = new Date();
+
+    if (this.value === "weekly") {
+      const mon = mondayOf(today);
+      const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+      start.value = fmt(mon);
+      end.value   = fmt(sun);
+    }
+    else if (this.value === "fortnightly") {
+      const mon = mondayOf(today);
+      const last = new Date(mon); last.setDate(mon.getDate() + 13); // 14 días: Mon -> +13
+      start.value = fmt(mon);
+      end.value   = fmt(last);
+    }
+    else if (this.value === "monthly") {
+      const first = new Date(today.getFullYear(), today.getMonth(), 1);
+      const last  = endOfMonth(today);
+      start.value = fmt(first);
+      end.value   = fmt(last);
+    }
+    else { // custom
+      // Limpia para que el usuario elija manualmente
+      start.value = "";
+      end.value = "";
+    }
+  });
+})();
+</script>
+</body>
+</html>

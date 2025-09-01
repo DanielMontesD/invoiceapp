@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}New Invoice{% endblock %}
+{% block content %}
+<h1>New Invoice</h1>
+
+<form method="post">
+  {% csrf_token %}
+  <fieldset>
+    <legend>Invoice data</legend>
+    {{ form.as_p }}
+  </fieldset>
+
+  <fieldset>
+    <legend>Work entries</legend>
+    {{ formset.management_form }}
+    <table>
+      <thead>
+        <tr><th>Date</th><th>Hours</th><th>Description</th><th>Delete</th></tr>
+      </thead>
+      <tbody id="entries">
+        {# vacío al cargar; JS insertará filas #}
+      </tbody>
+    </table>
+
+    {# Prototipo de fila: usa empty_form con __prefix__ que reemplazaremos en JS #}
+    <template id="empty-row">
+      <tr class="form-row">
+        <td>{{ formset.empty_form.work_date }}</td>
+        <td>{{ formset.empty_form.hours }}</td>
+        <td>{{ formset.empty_form.description }}</td>
+        <td>{% if formset.can_delete %}{{ formset.empty_form.DELETE }}{% endif %}</td>
+      </tr>
+    </template>
+  </fieldset>
+
+  <button type="submit" class="btn">Save</button>
+</form>
+
+<script>
+(function(){
+  const prefix = "{{ formset.prefix }}";
+  const tbody  = document.getElementById("entries");
+  const tmpl   = document.getElementById("empty-row");
+  const total  = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
+
+  const sel    = document.getElementById("id_period_type");
+  const startI = document.getElementById("id_period_start");
+  const endI   = document.getElementById("id_period_end");
+
+  // ----- LOCAL date utils (sin UTC) -----
+  const pad2 = (n) => String(n).padStart(2, "0");
+  function fmtLocal(d){
+    return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+  }
+  function parseYMD(s){
+    const [y,m,d] = s.split("-").map(Number);
+    // Fecha local; opcional: fijar al mediodía para evitar rarezas DST
+    const dt = new Date(y, (m||1)-1, d||1, 12, 0, 0, 0);
+    return dt;
+  }
+  function cloneDate(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0); }
+  function mondayOf(d){
+    const day = d.getDay(); // 0=Sun..6=Sat
+    const off = (day === 0 ? -6 : 1 - day);
+    const r = cloneDate(d); r.setDate(r.getDate() + off);
+    return r;
+  }
+  function endOfMonth(d){
+    return new Date(d.getFullYear(), d.getMonth()+1, 0, 12, 0, 0, 0);
+  }
+  function daysBetween(a,b){
+    const out = [];
+    const cur = cloneDate(a);
+    const stop = cloneDate(b);
+    while (cur <= stop){
+      out.push(cloneDate(cur));
+      cur.setDate(cur.getDate()+1);
+    }
+    return out;
+  }
+
+  function buildRows(dates){
+    tbody.innerHTML = "";
+    dates.forEach((d, i) => {
+      const row = tmpl.content.firstElementChild.cloneNode(true);
+      row.querySelectorAll("input,select,textarea,label").forEach(el=>{
+        ["name","id","for"].forEach(attr=>{
+          if(el.hasAttribute(attr)){
+            el.setAttribute(attr, el.getAttribute(attr).replace("__prefix__", i));
+          }
+        });
+      });
+      const dateInput = row.querySelector(`#id_${prefix}-${i}-work_date`);
+      if (dateInput) dateInput.value = fmtLocal(d);   // 👈 local, no UTC
+      tbody.appendChild(row);
+    });
+    total.value = dates.length;
+  }
+
+  // Recalcula por tipo. Usa la fecha "start" si el usuario ya la eligió; si no, hoy.
+  function updateByType(){
+    const base = startI.value ? parseYMD(startI.value) : new Date();
+    let s, e;
+
+    if (sel.value === "weekly"){
+      s = mondayOf(base);
+      e = new Date(s); e.setDate(s.getDate()+6);
+      startI.value = fmtLocal(s); endI.value = fmtLocal(e);
+    } else if (sel.value === "fortnightly"){
+      s = mondayOf(base);
+      e = new Date(s); e.setDate(s.getDate()+13);
+      startI.value = fmtLocal(s); endI.value = fmtLocal(e);
+    } else if (sel.value === "monthly"){
+      s = new Date(base.getFullYear(), base.getMonth(), 1, 12, 0, 0, 0);
+      e = endOfMonth(base);
+      startI.value = fmtLocal(s); endI.value = fmtLocal(e);
+    } else { // custom
+      if (!startI.value || !endI.value){ buildRows([]); return; }
+      s = parseYMD(startI.value); e = parseYMD(endI.value);
+    }
+    buildRows(daysBetween(s,e));
+  }
+
+  function updateByDates(){
+    if (!startI.value || !endI.value){ buildRows([]); return; }
+    const s = parseYMD(startI.value);
+    const e = parseYMD(endI.value);
+    if (e < s){ buildRows([]); return; }
+    buildRows(daysBetween(s,e));
+  }
+
+  sel.addEventListener("change", updateByType);
+  startI.addEventListener("change", updateByDates);
+  endI.addEventListener("change", updateByDates);
+
+  // Construcción inicial
+  updateByType();
+})();
+</script>
+{% endblock %}
