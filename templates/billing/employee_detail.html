@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{{ employee.name }} · Invoices{% endblock %}
+{% block content %}
+<h1>{{ employee.name }}</h1>
+<p class="muted">
+  {{ employee.email|default:"—" }} · Default rate: ${{ employee.default_hourly_rate }}
+</p>
+<p>
+  <a class="btn" href="{% url 'invoice_create_for_employee' employee.pk %}">New invoice for {{ employee.name }}</a>
+</p>
+
+<h2>Invoices</h2>
+<table>
+  <thead>
+    <tr><th>#</th><th>Client</th><th>Period</th><th>Hours</th><th>Total</th></tr>
+  </thead>
+  <tbody>
+    {% for inv in invoices %}
+      <tr>
+        <td><a href="{% url 'invoice_detail' inv.pk %}">{{ inv.invoice_number }}</a></td>
+        <td>
+          {{ inv.client_name }}
+          {% if inv.client_email %}<div class="muted">{{ inv.client_email }}</div>{% endif %}
+        </td>
+        <td>
+          {{ inv.period_start }} → {{ inv.period_end }}
+          <div class="muted">({{ inv.get_period_type_display }})</div>
+        </td>
+        <td>{{ inv.total_hours }}</td>
+        <td>${{ inv.total_amount }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5">No invoices for this employee… yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

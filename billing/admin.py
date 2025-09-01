@@ -1,9 +1,12 @@
 from django.contrib import admin
-from .models import Invoice, WorkEntry
+from .models import Invoice, WorkEntry, Employee
 
-# admin.site.site_header = "InvoiceApp Admin"
-# admin.site.site_title = "InvoiceApp Admin"
-# admin.site.index_title = "Dashboard"
+
+@admin.register(Employee)
+class EmployeeAdmin(admin.ModelAdmin):
+    list_display = ("name", "email", "default_hourly_rate", "is_active")
+    search_fields = ("name", "email")
+    list_filter = ("is_active",)
 
 
 class WorkEntryInline(admin.TabularInline):
@@ -15,6 +18,7 @@ class WorkEntryInline(admin.TabularInline):
 class InvoiceAdmin(admin.ModelAdmin):
     list_display = (
         "invoice_number",
+        "employee",
         "client_name",
         "period_start",
         "period_end",
@@ -22,7 +26,7 @@ class InvoiceAdmin(admin.ModelAdmin):
         "total_amount",
     )
     search_fields = ("invoice_number", "client_name", "client_email")
-    list_filter = ("period_type", "date_issued")
+    list_filter = ("employee", "period_type", "date_issued")
     inlines = [WorkEntryInline]
 
 

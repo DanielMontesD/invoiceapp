@@ -1,7 +1,24 @@
-from django.db import models
 from decimal import Decimal
+from django.db import models
 from django.utils import timezone
 from django.urls import reverse
+
+
+class Employee(models.Model):
+    name = models.CharField(max_length=120)
+    email = models.EmailField(blank=True)
+    default_hourly_rate = models.DecimalField(
+        max_digits=8, decimal_places=2, default=50
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
 
 
 class Invoice(models.Model):
@@ -11,6 +28,15 @@ class Invoice(models.Model):
         ("monthly", "Monthly"),
         ("custom", "Custom range"),
     ]
+
+    # NUEVO: relación con empleado (nullable por compatibilidad con invoices existentes)
+    employee = models.ForeignKey(
+        Employee,
+        related_name="invoices",
+        on_delete=models.PROTECT,  # evita borrar un empleado con invoices
+        null=True,
+        blank=True,
+    )
 
     invoice_number = models.CharField(max_length=20, unique=True, blank=True)
     client_name = models.CharField(max_length=120)
@@ -34,7 +60,6 @@ class Invoice(models.Model):
         return reverse("invoice_detail", args=[self.pk])
 
     def save(self, *args, **kwargs):
-        # Autogenerate sequential invoice number like 00001, 00002, ...
         if not self.invoice_number:
             last = Invoice.objects.order_by("-id").first()
             next_num = 1

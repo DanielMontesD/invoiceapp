@@ -6,7 +6,14 @@ from .models import Invoice, WorkEntry
 class InvoiceForm(forms.ModelForm):
     class Meta:
         model = Invoice
-        exclude = ["invoice_number", "date_issued"]
+        fields = [
+            "employee",
+            "period_type",
+            "period_start",
+            "period_end",
+            "hourly_rate",
+            "notes",
+        ]
         widgets = {
             "period_start": forms.DateInput(attrs={"type": "date"}),
             "period_end": forms.DateInput(attrs={"type": "date"}),

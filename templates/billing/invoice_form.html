@@ -3,26 +3,78 @@
 {% block content %}
 <h1>New Invoice</h1>
 
-<form method="post">
+<form method="post" novalidate>
   {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="errors">
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
   <fieldset>
     <legend>Invoice data</legend>
-    {{ form.as_p }}
+
+    <p>
+      <label for="id_employee"><strong>Employee</strong></label><br>
+      {{ form.employee }}
+    </p>
+
+    {% if fixed_employee %}
+      <p class="muted">
+        <strong>Email (read-only):</strong> {{ fixed_employee.email|default:"—" }}
+      </p>
+    {% else %}
+      <p class="muted">
+        <strong>Email:</strong> will be set from the selected employee when saving.
+      </p>
+    {% endif %}
+
+    <p>{{ form.period_type.label_tag }} {{ form.period_type }}</p>
+    <p>{{ form.period_start.label_tag }} {{ form.period_start }}</p>
+    <p>{{ form.period_end.label_tag }} {{ form.period_end }}</p>
+    <p>{{ form.hourly_rate.label_tag }} {{ form.hourly_rate }}</p>
+    <p>{{ form.notes.label_tag }} {{ form.notes }}</p>
   </fieldset>
 
   <fieldset>
     <legend>Work entries</legend>
+
+    {% if formset.non_form_errors %}
+      <div class="errors">{{ formset.non_form_errors }}</div>
+    {% endif %}
+
     {{ formset.management_form }}
+
     <table>
       <thead>
         <tr><th>Date</th><th>Hours</th><th>Description</th><th>Delete</th></tr>
       </thead>
       <tbody id="entries">
-        {# vacío al cargar; JS insertará filas #}
+        {# Si venimos de un POST con errores, renderiza las filas que ya existen #}
+        {% if formset.total_form_count %}
+          {% for f in formset.forms %}
+            <tr class="form-row">
+              <td>
+                {{ f.work_date }}
+                {% if f.work_date.errors %}<div class="field-errors">{{ f.work_date.errors|join:", " }}</div>{% endif %}
+              </td>
+              <td>
+                {{ f.hours }}
+                {% if f.hours.errors %}<div class="field-errors">{{ f.hours.errors|join:", " }}</div>{% endif %}
+              </td>
+              <td>
+                {{ f.description }}
+                {% if f.description.errors %}<div class="field-errors">{{ f.description.errors|join:", " }}</div>{% endif %}
+              </td>
+              <td>{% if formset.can_delete %}{{ f.DELETE }}{% endif %}</td>
+            </tr>
+          {% endfor %}
+        {% endif %}
       </tbody>
     </table>
 
-    {# Prototipo de fila: usa empty_form con __prefix__ que reemplazaremos en JS #}
+    {# Prototipo para generar filas en el cliente cuando TOTAL_FORMS = 0 en GET #}
     <template id="empty-row">
       <tr class="form-row">
         <td>{{ formset.empty_form.work_date }}</td>
@@ -38,7 +90,7 @@
 
 <script>
 (function(){
-  const prefix = "{{ formset.prefix }}";
+  const prefix = "{{ formset.prefix }}";  // p.ej. workentry_set
   const tbody  = document.getElementById("entries");
   const tmpl   = document.getElementById("empty-row");
   const total  = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
@@ -47,34 +99,52 @@
   const startI = document.getElementById("id_period_start");
   const endI   = document.getElementById("id_period_end");
 
-  // ----- LOCAL date utils (sin UTC) -----
-  const pad2 = (n) => String(n).padStart(2, "0");
-  function fmtLocal(d){
-    return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
-  }
-  function parseYMD(s){
-    const [y,m,d] = s.split("-").map(Number);
-    // Fecha local; opcional: fijar al mediodía para evitar rarezas DST
-    const dt = new Date(y, (m||1)-1, d||1, 12, 0, 0, 0);
-    return dt;
-  }
-  function cloneDate(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0); }
+  // ---------- Helpers de fecha (evitar corrimiento; usar mediodía local) ----------
+  function noon(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0); }
+  function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return noon(x); }
   function mondayOf(d){
-    const day = d.getDay(); // 0=Sun..6=Sat
+    const day = d.getDay(); // 0=Dom..6=Sáb
     const off = (day === 0 ? -6 : 1 - day);
-    const r = cloneDate(d); r.setDate(r.getDate() + off);
-    return r;
+    return addDays(noon(d), off);
   }
-  function endOfMonth(d){
-    return new Date(d.getFullYear(), d.getMonth()+1, 0, 12, 0, 0, 0);
+  function endOfMonth(d){ return noon(new Date(d.getFullYear(), d.getMonth()+1, 0)); }
+
+  // Lee un <input type="date"> como Date (soporta "YYYY-MM-DD" y "DD/MM/YYYY")
+  function getInputDate(input){
+    if (!input) return null;
+    if (input.valueAsDate) return noon(input.valueAsDate);
+    const v = input.value;
+    if (!v) return null;
+    let y, m, d;
+    if (v.includes("-")) {            // "YYYY-MM-DD"
+      [y, m, d] = v.split("-").map(Number);
+    } else if (v.includes("/")) {     // "DD/MM/YYYY" (algunos locales Windows)
+      [d, m, y] = v.split("/").map(Number);
+    } else {
+      return null;
+    }
+    return noon(new Date(y, (m||1)-1, d||1));
   }
+
+  // Escribe en el input una fecha; fija mediodía local para evitar que muestre el día anterior
+  function setInputDate(input, date){
+    if (!input || !date) return;
+    const localNoon = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0, 0);
+    if ("valueAsDate" in input) {
+      input.valueAsDate = localNoon;
+    } else {
+      const pad = n => String(n).padStart(2, "0");
+      input.value = `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
+    }
+  }
+
   function daysBetween(a,b){
     const out = [];
-    const cur = cloneDate(a);
-    const stop = cloneDate(b);
+    if (!a || !b) return out;
+    let cur = noon(a), stop = noon(b);
     while (cur <= stop){
-      out.push(cloneDate(cur));
-      cur.setDate(cur.getDate()+1);
+      out.push(noon(cur));
+      cur = addDays(cur, 1);
     }
     return out;
   }
@@ -85,53 +155,62 @@
       const row = tmpl.content.firstElementChild.cloneNode(true);
       row.querySelectorAll("input,select,textarea,label").forEach(el=>{
         ["name","id","for"].forEach(attr=>{
-          if(el.hasAttribute(attr)){
+          if (el.hasAttribute(attr)){
             el.setAttribute(attr, el.getAttribute(attr).replace("__prefix__", i));
           }
         });
       });
       const dateInput = row.querySelector(`#id_${prefix}-${i}-work_date`);
-      if (dateInput) dateInput.value = fmtLocal(d);   // 👈 local, no UTC
+      if (dateInput) setInputDate(dateInput, d);
       tbody.appendChild(row);
     });
-    total.value = dates.length;
+    if (total) total.value = dates.length;
   }
-
-  // Recalcula por tipo. Usa la fecha "start" si el usuario ya la eligió; si no, hoy.
+  
   function updateByType(){
-    const base = startI.value ? parseYMD(startI.value) : new Date();
+    const now = new Date();
+    const existingStart = getInputDate(startI);   // Date o null
     let s, e;
 
-    if (sel.value === "weekly"){
-      s = mondayOf(base);
-      e = new Date(s); e.setDate(s.getDate()+6);
-      startI.value = fmtLocal(s); endI.value = fmtLocal(e);
-    } else if (sel.value === "fortnightly"){
-      s = mondayOf(base);
-      e = new Date(s); e.setDate(s.getDate()+13);
-      startI.value = fmtLocal(s); endI.value = fmtLocal(e);
-    } else if (sel.value === "monthly"){
-      s = new Date(base.getFullYear(), base.getMonth(), 1, 12, 0, 0, 0);
-      e = endOfMonth(base);
-      startI.value = fmtLocal(s); endI.value = fmtLocal(e);
-    } else { // custom
-      if (!startI.value || !endI.value){ buildRows([]); return; }
-      s = parseYMD(startI.value); e = parseYMD(endI.value);
+    if (sel.value === "weekly") {
+      // Weekly: alinear al lunes (si ya hay start, al lunes de esa misma semana)
+      s = existingStart ? mondayOf(existingStart) : mondayOf(now);
+      e = addDays(s, 6);
     }
-    buildRows(daysBetween(s,e));
+    else if (sel.value === "fortnightly") {
+      // Fortnightly: respetar EXACTAMENTE el start actual si existe
+      s = existingStart ? existingStart : mondayOf(now);
+      console.log(s);
+      e = addDays(s, 13);   // 14 días (si prefieres terminar un día antes, usa 12)
+      console.log(e)
+    }
+    else if (sel.value === "monthly") {
+      // Monthly: respetar EXACTAMENTE el start actual si existe
+      // y cerrar al último día del MES de s
+      s = existingStart ? existingStart
+                        : noon(new Date(now.getFullYear(), now.getMonth(), 1));
+      e = endOfMonth(s);    // fin del mes de 's'
+    }
+    else { // custom
+      const s0 = getInputDate(startI), e0 = getInputDate(endI);
+      if (!s0 || !e0) { buildRows([]); return; }
+      s = s0; e = e0;
+    }
+
+    setInputDate(startI, s);   // fija al mediodía local (evita “ir un día atrás” en Windows)
+    setInputDate(endI, e);
+    buildRows(daysBetween(s, e));
   }
 
   function updateByDates(){
-    if (!startI.value || !endI.value){ buildRows([]); return; }
-    const s = parseYMD(startI.value);
-    const e = parseYMD(endI.value);
-    if (e < s){ buildRows([]); return; }
-    buildRows(daysBetween(s,e));
+    const s = getInputDate(startI), e = getInputDate(endI);
+    if (!s || !e || e < s) { buildRows([]); return; }
+    buildRows(daysBetween(s, e));
   }
 
-  sel.addEventListener("change", updateByType);
-  startI.addEventListener("change", updateByDates);
-  endI.addEventListener("change", updateByDates);
+  sel && sel.addEventListener("change", updateByType);
+  startI && startI.addEventListener("change", updateByDates);
+  endI && endI.addEventListener("change", updateByDates);
 
   // Construcción inicial
   updateByType();
