@@ -14,8 +14,9 @@
     <tr>
       <th>Date</th>
       <th>Weekday</th>
-      <th>Hours</th>
       <th>Description</th>
+      <th>Hours</th>
+      <th>Amount</th>
     </tr>
   </thead>
   <tbody>
@@ -23,23 +24,26 @@
       <tr>
         <td>{{ e.work_date|date:"Y-m-d" }}</td>
         <td>{{ e.work_date|date:"l" }}</td>  {# "l" = Monday, Tuesday, ... #}
-        <td>{{ e.hours }}</td>
         <td>{{ e.description }}</td>
+        <td>{{ e.hours }}</td>
+        <td class="right">${{ e.amount|floatformat:2 }}</td>
       </tr>
+    {% empty %}
+      <tr><td colspan="5" class="muted">No work entries</td></tr>
     {% endfor %}
   </tbody>
-  <tfoot>
-    <tr>
-      <th colspan="2">Total hours</th>
-      <th>{{ invoice.total_hours }}</th>
-      <th></th>
-    </tr>
-    <tr>
-      <th colspan="2">Total amount</th>
-      <th>${{ invoice.total_amount }}</th>
-      <th></th>
-    </tr>
-  </tfoot>
+<tfoot>
+  <tr>
+    <!-- Ocupa Date + Weekday -->
+    <td colspan="3" class="right"><strong>Totals</strong></td>
+    <!-- Bajo Hours -->
+    <td class="right"><strong>{{ invoice.total_hours }}</strong></td>
+    <!-- Bajo Amount -->
+    <td class="right"><strong>${{ invoice.total_amount|floatformat:2 }}</strong></td>
+    <!-- Bajo Description (vacío) -->
+    <td></td>
+  </tr>
+</tfoot>
 </table>
 {% if invoice.notes %}
 <p><strong>Notes:</strong> {{ invoice.notes }}</p>
