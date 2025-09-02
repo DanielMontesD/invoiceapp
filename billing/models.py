@@ -91,3 +91,14 @@ class WorkEntry(models.Model):
 
     def __str__(self):
         return f"{self.work_date} - {self.hours} h"
+
+    @property
+    def amount(self):
+        "Daily amoutn made"
+        h = self.hours or Decimal("0")
+        r = (
+            (self.invoice.hourly_rate or Decimal("0"))
+            if self.invoice_id
+            else Decimal("0")
+        )
+        return h * r
