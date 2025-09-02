@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page { size: A4; margin: 20mm; }
+    body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 12px; color: #222; }
+    h1 { font-size: 20px; margin: 0 0 10px 0; }
+    .meta, .totals { margin: 10px 0; }
+    .muted { color: #666; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+    th { background: #f5f5f5; }
+    .right { text-align: right; }
+    .no-border td { border: none; }
+  </style>
+</head>
+<body>
+  <h1>Invoice {{ invoice.invoice_number }}</h1>
+
+  <div class="meta">
+    <div><strong>Date issued:</strong> {{ invoice.date_issued }}</div>
+    <div><strong>Period:</strong> {{ invoice.period_start }} – {{ invoice.period_end }} ({{ invoice.get_period_type_display }})</div>
+    <div><strong>Employee:</strong> {{ invoice.employee|default:"—" }}</div>
+    {% if invoice.client_email %}<div class="muted">Email: {{ invoice.client_email }}</div>{% endif %}
+    <div><strong>Hourly rate:</strong> ${{ invoice.hourly_rate }}</div>
+  </div>
+
+  <table>
+  <thead>
+    <tr>
+      <th style="width: 20%;">Date</th>
+      <th style="width: 15%;">Weekday</th>
+      <th style="width: 15%;">Hours</th>
+      <th>Description</th>  {# ~50% restante #}
+    </tr>
+  </thead>
+  <tbody>
+    {% for e in invoice.work_entries.all %}
+    <tr>
+      <td>{{ e.work_date|date:"Y-m-d" }}</td>
+      <td>{{ e.work_date|date:"l" }}</td>
+      <td class="right">{{ e.hours }}</td>
+      <td>{{ e.description }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="4" class="muted">No work entries</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+  <table class="totals">
+    <tr class="no-border">
+      <td style="width: 70%;"></td>
+      <td style="width: 15%;"><strong>Total hours</strong></td>
+      <td style="width: 15%;" class="right"><strong>{{ invoice.total_hours }}</strong></td>
+    </tr>
+    <tr class="no-border">
+      <td></td>
+      <td><strong>Total amount</strong></td>
+      <td class="right"><strong>${{ invoice.total_amount }}</strong></td>
+    </tr>
+  </table>
+
+  {% if invoice.notes %}
+    <p class="muted"><strong>Notes:</strong> {{ invoice.notes }}</p>
+  {% endif %}
+</body>
+</html>

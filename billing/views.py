@@ -5,9 +5,14 @@ from django.contrib import messages
 from django.forms import inlineformset_factory
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.http import HttpResponse
+from django.template.loader import render_to_string
 
 from .forms import InvoiceForm, WorkEntryFormSet
 from .models import Invoice, Employee
+
+from io import BytesIO
+from xhtml2pdf import pisa
 
 
 # --- NUEVA: lista de empleados ---
@@ -159,3 +164,20 @@ def invoice_create(request):
     return render(
         request, "billing/invoice_form.html", {"form": form, "formset": formset}
     )
+
+
+# Creacion de invoices como PDF para poder ser enviados
+def invoice_pdf(request, pk):
+    invoice = get_object_or_404(Invoice, pk=pk)
+    html = render_to_string("billing/invoice_pdf.html", {"invoice": invoice})
+
+    result = BytesIO()
+    pdf = pisa.CreatePDF(html, dest=result, encoding="UTF-8")
+
+    if pdf.err:
+        return HttpResponse("PDF generation error", status=500)
+
+    filename = f"Invoice_{invoice.invoice_number or invoice.pk}.pdf"
+    resp = HttpResponse(result.getvalue(), content_type="application/pdf")
+    resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return resp
