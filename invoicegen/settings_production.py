@@ -2,39 +2,34 @@
 Production settings for invoicegen project.
 """
 import os
-from decouple import config
-from .settings import *
+from pathlib import Path
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security settings
 DEBUG = True  # Habilitado para desarrollo y configuración
-SECRET_KEY = config('SECRET_KEY', default='your-secret-key-here')
+SECRET_KEY = 'your-secret-key-here'  # Simplified for now
 ALLOWED_HOSTS = ['*']  # Permitir todos los hosts para Railway
 
-# Database - PostgreSQL para producción
-# Usar DATABASE_URL de Railway si está disponible, sino usar SQLite como fallback
-try:
-    if config('DATABASE_URL', default=None):
-        import dj_database_url
-        DATABASES = {
-            'default': dj_database_url.parse(config('DATABASE_URL'))
-        }
-    else:
-        # Fallback to SQLite if no DATABASE_URL is provided
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-            }
-        }
-except Exception as e:
-    # Ultimate fallback to SQLite
-    print(f"Database configuration failed: {e}")
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-        }
+# Application definition
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'billing',
+]
+
+# Database - Use SQLite for now to avoid complexity
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
+}
 
 # Middleware configuration
 MIDDLEWARE = [
@@ -47,6 +42,32 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+# URL Configuration
+ROOT_URLCONF = 'invoicegen.urls'
+
+# Templates
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+# Internationalization
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'UTC'
+USE_I18N = True
+USE_TZ = True
 
 # Static files
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
