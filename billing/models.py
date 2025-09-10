@@ -28,6 +28,13 @@ class Invoice(models.Model):
         ("monthly", "Monthly"),
         ("custom", "Custom range"),
     ]
+    
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('sent', 'Sent'),
+        ('paid', 'Paid'),
+        ('overdue', 'Overdue'),
+    ]
 
     # NUEVO: relación con empleado (nullable por compatibilidad con invoices existentes)
     employee = models.ForeignKey(
@@ -48,6 +55,7 @@ class Invoice(models.Model):
     period_end = models.DateField()
     hourly_rate = models.DecimalField(max_digits=8, decimal_places=2, default=50)
     date_issued = models.DateField(default=timezone.localdate)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='draft')
     notes = models.TextField(blank=True)
 
     class Meta:

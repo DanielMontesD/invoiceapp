@@ -12,12 +12,20 @@ class InvoiceForm(forms.ModelForm):
             "period_start",
             "period_end",
             "hourly_rate",
+            "status",
             "notes",
         ]
         widgets = {
             "period_start": forms.DateInput(attrs={"type": "date"}),
             "period_end": forms.DateInput(attrs={"type": "date"}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Si es una factura nueva (sin ID), solo permitir Draft
+        if not self.instance.pk:
+            self.fields['status'].choices = [('draft', 'Draft')]
+            self.fields['status'].initial = 'draft'
 
 
 class WorkEntryForm(forms.ModelForm):
