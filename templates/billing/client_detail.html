@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ client.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Client Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1><i class="fas fa-user"></i> {{ client.name }}</h1>
+                    <p class="text-muted mb-0">
+                        {% if client.email %}
+                            <i class="fas fa-envelope"></i> {{ client.email }}
+                        {% endif %}
+                        <span class="ms-3">
+                            <i class="fas fa-dollar-sign"></i> ${{ client.default_hourly_rate }}/hour
+                        </span>
+                    </p>
+                </div>
+                <div class="btn-group">
+                    <a href="{% url 'client_edit' client.pk %}" class="btn btn-warning">
+                        <i class="fas fa-edit"></i> Edit Client
+                    </a>
+                    <a href="{% url 'invoice_create_for_client' client.pk %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> New Invoice
+                    </a>
+                </div>
+            </div>
+
+            <!-- Client Info Card -->
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-info-circle"></i> Client Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Name:</strong> {{ client.name }}</p>
+                                    <p><strong>Email:</strong> 
+                                        {% if client.email %}
+                                            <a href="mailto:{{ client.email }}">{{ client.email }}</a>
+                                        {% else %}
+                                            <span class="text-muted">Not provided</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Default Hourly Rate:</strong> ${{ client.default_hourly_rate }}</p>
+                                    <p><strong>Status:</strong> 
+                                        {% if client.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <p><strong>Created:</strong> {{ client.created_at|date:"F d, Y \a\t g:i A" }}</p>
+                                    <p><strong>Last Updated:</strong> {{ client.updated_at|date:"F d, Y \a\t g:i A" }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Statistics</h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="row">
+                                <div class="col-6">
+                                    <h3 class="text-primary">{{ invoices.count }}</h3>
+                                    <p class="text-muted mb-0">Total Invoices</p>
+                                </div>
+                                <div class="col-6">
+                                    <h3 class="text-success">
+                                        {% if invoices %}
+                                            ${{ invoices|length|floatformat:2 }}
+                                        {% else %}
+                                            $0.00
+                                        {% endif %}
+                                    </h3>
+                                    <p class="text-muted mb-0">Total Revenue</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invoices Section -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-file-invoice"></i> Recent Invoices</h5>
+                    <a href="{% url 'invoice_create_for_client' client.pk %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus"></i> New Invoice
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if invoices %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Invoice #</th>
+                                        <th>Period</th>
+                                        <th>Status</th>
+                                        <th>Hours</th>
+                                        <th>Amount</th>
+                                        <th>Issued</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for invoice in invoices %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'invoice_detail' invoice.pk %}" class="text-decoration-none">
+                                                {{ invoice.invoice_number }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            {{ invoice.period_start|date:"M d" }} - {{ invoice.period_end|date:"M d, Y" }}
+                                        </td>
+                                        <td>
+                                            {% if invoice.status == 'draft' %}
+                                                <span class="badge bg-secondary">Draft</span>
+                                            {% elif invoice.status == 'sent' %}
+                                                <span class="badge bg-warning">Sent</span>
+                                            {% elif invoice.status == 'paid' %}
+                                                <span class="badge bg-success">Paid</span>
+                                            {% elif invoice.status == 'overdue' %}
+                                                <span class="badge bg-danger">Overdue</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ invoice.total_hours }}h</td>
+                                        <td>${{ invoice.total_amount }}</td>
+                                        <td>{{ invoice.date_issued|date:"M d, Y" }}</td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a href="{% url 'invoice_detail' invoice.pk %}" 
+                                                   class="btn btn-sm btn-outline-primary" title="View">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="{% url 'invoice_pdf' invoice.pk %}" 
+                                                   class="btn btn-sm btn-outline-info" title="PDF">
+                                                    <i class="fas fa-file-pdf"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-file-invoice fa-2x text-muted mb-3"></i>
+                            <h5 class="text-muted">No invoices yet</h5>
+                            <p class="text-muted">Create the first invoice for this client.</p>
+                            <a href="{% url 'invoice_create_for_client' client.pk %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Create First Invoice
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

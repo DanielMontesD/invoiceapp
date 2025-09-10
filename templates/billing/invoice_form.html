@@ -15,18 +15,9 @@
   <fieldset>
     <legend>Invoice data</legend>
 
-    <p>
-      <label for="id_employee"><strong>Employee</strong></label><br>
-      {{ form.employee }}
-    </p>
-
     {% if fixed_employee %}
       <p class="muted">
-        <strong>Email (read-only):</strong> {{ fixed_employee.email|default:"—" }}
-      </p>
-    {% else %}
-      <p class="muted">
-        <strong>Email:</strong> will be set from the selected employee when saving.
+        <strong>Client:</strong> {{ fixed_employee.name }} ({{ fixed_employee.email|default:"No email" }})
       </p>
     {% endif %}
 
@@ -49,7 +40,7 @@
 
     <table>
       <thead>
-        <tr><th>Date</th><th>Hours</th><th>Description</th><th>Delete</th></tr>
+        <tr><th>Date</th><th>Hours</th><th>Description</th></tr>
       </thead>
       <tbody id="entries">
         {# Si venimos de un POST con errores, renderiza las filas que ya existen #}
@@ -68,7 +59,6 @@
                 {{ f.description }}
                 {% if f.description.errors %}<div class="field-errors">{{ f.description.errors|join:", " }}</div>{% endif %}
               </td>
-              <td>{% if formset.can_delete %}{{ f.DELETE }}{% endif %}</td>
             </tr>
           {% endfor %}
         {% endif %}
@@ -81,7 +71,6 @@
         <td>{{ formset.empty_form.work_date }}</td>
         <td>{{ formset.empty_form.hours }}</td>
         <td>{{ formset.empty_form.description }}</td>
-        <td>{% if formset.can_delete %}{{ formset.empty_form.DELETE }}{% endif %}</td>
       </tr>
     </template>
   </fieldset>
@@ -161,6 +150,7 @@
           }
         });
       });
+      // Pre-fill dates automatically
       const dateInput = row.querySelector(`#id_${prefix}-${i}-work_date`);
       if (dateInput) setInputDate(dateInput, d);
       tbody.appendChild(row);

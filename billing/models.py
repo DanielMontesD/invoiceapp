@@ -2,23 +2,72 @@ from decimal import Decimal
 from django.db import models
 from django.utils import timezone
 from django.urls import reverse
+from django.contrib.auth.models import User
 
 
-class Employee(models.Model):
-    name = models.CharField(max_length=120)
-    email = models.EmailField(blank=True)
-    default_hourly_rate = models.DecimalField(
-        max_digits=8, decimal_places=2, default=50
+class Client(models.Model):
+    """
+    Client model representing customers/employers for whom invoices are generated.
+    Each client belongs to a user and has a default hourly rate.
+    """
+    user = models.ForeignKey(
+        User,
+        related_name="clients",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="User who owns this client"
     )
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    name = models.CharField(
+        max_length=120,
+        help_text="Client's full name or company name"
+    )
+    email = models.EmailField(
+        blank=True,
+        help_text="Client's email address for invoice delivery"
+    )
+    default_hourly_rate = models.DecimalField(
+        max_digits=8, 
+        decimal_places=2, 
+        default=50,
+        help_text="Default hourly rate for this client"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this client is currently active"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this client was created"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text="When this client was last updated"
+    )
 
     class Meta:
         ordering = ["name"]
 
     def __str__(self):
         return self.name
+
+
+# Employee model removed - use Client instead
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    business_name = models.CharField(max_length=120, blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    address = models.TextField(blank=True)
+    default_hourly_rate = models.DecimalField(
+        max_digits=8, decimal_places=2, default=50
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.get_full_name() or self.user.username} - {self.business_name}"
 
 
 class Invoice(models.Model):
@@ -36,14 +85,25 @@ class Invoice(models.Model):
         ('overdue', 'Overdue'),
     ]
 
-    # NUEVO: relación con empleado (nullable por compatibilidad con invoices existentes)
-    employee = models.ForeignKey(
-        Employee,
+    # User who owns this invoice
+    user = models.ForeignKey(
+        User,
         related_name="invoices",
-        on_delete=models.PROTECT,  # evita borrar un empleado con invoices
+        on_delete=models.CASCADE,
         null=True,
         blank=True,
     )
+    
+    # Client (formerly employee) - nullable for backward compatibility
+    client = models.ForeignKey(
+        Client,
+        related_name="invoices",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
+    
+    # Legacy employee field removed - use client instead
 
     invoice_number = models.CharField(max_length=20, unique=True, blank=True)
     client_name = models.CharField(max_length=120)
