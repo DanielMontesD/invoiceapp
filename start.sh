@@ -15,6 +15,6 @@ python manage.py check --settings=invoicegen.settings_production
 echo "Running migrations..."
 python manage.py migrate --settings=invoicegen.settings_production || echo "Migrations failed, continuing..."
 
-# Start gunicorn
-echo "Starting gunicorn..."
-exec gunicorn invoicegen.wsgi_production:application --bind 0.0.0.0:$PORT
+# Start health check server (this will handle Railway's health checks)
+echo "Starting health check server..."
+exec python health.py
