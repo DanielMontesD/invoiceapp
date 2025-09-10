@@ -14,7 +14,9 @@
         <td class="muted">{{ emp.email|default:"—" }}</td>
         <td>${{ emp.default_hourly_rate }}</td>
         <td>
-          <a class="btn" href="{% url 'invoice_create_for_employee' emp.pk %}">New invoice</a>
+          <a class="btn btn-primary" href="{% url 'invoice_create_for_employee' emp.pk %}">
+            <i class="fas fa-plus"></i> New Invoice
+          </a>
         </td>
       </tr>
     {% empty %}

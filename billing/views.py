@@ -55,9 +55,13 @@ def client_detail(request, pk):
     client = get_object_or_404(Client, pk=pk)
     invoices = client.invoices.all().order_by("-id")
     
+    # Calculate total revenue from all invoices
+    total_revenue = sum(invoice.total_amount for invoice in invoices)
+    
     return render(request, "billing/client_detail.html", {
         "client": client,
         "invoices": invoices,
+        "total_revenue": total_revenue,
     })
 
 
@@ -358,7 +362,8 @@ def invoice_mark_sent(request, pk):
         invoice.status = 'sent'
         invoice.save()
         messages.success(request, f"Invoice {invoice.invoice_number} marked as sent.")
-    return redirect('invoice_detail', pk=pk)
+    # Redirect back to client detail page
+    return redirect('client_detail', pk=invoice.client.pk)
 
 
 def invoice_mark_paid(request, pk):
@@ -367,7 +372,8 @@ def invoice_mark_paid(request, pk):
         invoice.status = 'paid'
         invoice.save()
         messages.success(request, f"Invoice {invoice.invoice_number} marked as paid.")
-    return redirect('invoice_detail', pk=pk)
+    # Redirect back to client detail page
+    return redirect('client_detail', pk=invoice.client.pk)
 
 
 def invoice_duplicate(request, pk):

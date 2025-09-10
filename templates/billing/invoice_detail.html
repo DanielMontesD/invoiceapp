@@ -5,7 +5,7 @@
 
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
   <div>
-    <p><strong>Employee:</strong> {{ invoice.employee|default:"—" }}</p>
+    <p><strong>Employee:</strong> {{ invoice.client_name|default:"—" }}</p>
     <p class="muted">{{ invoice.client_email }}</p> 
     <p><strong>Period:</strong> {{ invoice.period_start }} → {{ invoice.period_end }} ({{ invoice.get_period_type_display }})</p>
     <p><strong>Issued:</strong> {{ invoice.date_issued }}</p>
@@ -13,13 +13,15 @@
   </div>
   <div>
     <p><strong>Status:</strong> 
-      <span style="padding: 4px 8px; border-radius: 4px; color: white; background-color: 
-        {% if invoice.status == 'draft' %}orange
-        {% elif invoice.status == 'sent' %}blue
-        {% elif invoice.status == 'paid' %}green
-        {% else %}red{% endif %};">
-        {{ invoice.get_status_display }}
-      </span>
+      {% if invoice.status == 'draft' %}
+        <span class="badge bg-warning">Draft</span>
+      {% elif invoice.status == 'sent' %}
+        <span class="badge bg-primary">Sent</span>
+      {% elif invoice.status == 'paid' %}
+        <span class="badge bg-success">Paid</span>
+      {% elif invoice.status == 'overdue' %}
+        <span class="badge bg-danger">Overdue</span>
+      {% endif %}
     </p>
   </div>
 </div>
@@ -66,16 +68,24 @@
 
 <div style="margin-top: 20px;">
   <h3>Actions</h3>
-  <p>
-    <a class="btn" href="{% url 'invoice_pdf' invoice.pk %}">Download PDF</a>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-info" href="{% url 'invoice_pdf' invoice.pk %}">
+      <i class="fas fa-file-pdf"></i> Download PDF
+    </a>
     
     {% if invoice.status == 'draft' %}
-      <a class="btn" href="{% url 'invoice_mark_sent' invoice.pk %}" style="background-color: #007bff; color: white;">Mark as Sent</a>
+      <a class="btn btn-primary" href="{% url 'invoice_mark_sent' invoice.pk %}">
+        <i class="fas fa-share"></i> Mark as Sent
+      </a>
     {% elif invoice.status == 'sent' %}
-      <a class="btn" href="{% url 'invoice_mark_paid' invoice.pk %}" style="background-color: #28a745; color: white;">Mark as Paid</a>
+      <a class="btn btn-success" href="{% url 'invoice_mark_paid' invoice.pk %}">
+        <i class="fas fa-dollar-sign"></i> Mark as Paid
+      </a>
     {% endif %}
     
-    <a class="btn" href="{% url 'invoice_duplicate' invoice.pk %}" style="background-color: #6c757d; color: white;">Duplicate Invoice</a>
-  </p>
+    <a class="btn btn-secondary" href="{% url 'invoice_duplicate' invoice.pk %}">
+      <i class="fas fa-copy"></i> Duplicate Invoice
+    </a>
+  </div>
 </div>
 {% endblock %}

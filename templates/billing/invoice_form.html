@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 {% block title %}New Invoice{% endblock %}
 {% block content %}
+<style>
+  /* Styling for weekday column - left aligned for consistency */
+  .weekday-cell {
+    text-align: left !important;
+    font-weight: bold;
+    color: #666;
+    min-width: 100px;
+  }
+</style>
 <h1>New Invoice</h1>
 
 <form method="post" novalidate>
@@ -40,7 +49,7 @@
 
     <table>
       <thead>
-        <tr><th>Date</th><th>Hours</th><th>Description</th></tr>
+        <tr><th>Date</th><th>Day</th><th>Hours</th><th>Description</th></tr>
       </thead>
       <tbody id="entries">
         {# Si venimos de un POST con errores, renderiza las filas que ya existen #}
@@ -51,6 +60,7 @@
                 {{ f.work_date }}
                 {% if f.work_date.errors %}<div class="field-errors">{{ f.work_date.errors|join:", " }}</div>{% endif %}
               </td>
+              <td class="weekday-cell">{% if f.work_date.value %}{{ f.work_date.value|date:"l" }}{% endif %}</td>
               <td>
                 {{ f.hours }}
                 {% if f.hours.errors %}<div class="field-errors">{{ f.hours.errors|join:", " }}</div>{% endif %}
@@ -69,13 +79,16 @@
     <template id="empty-row">
       <tr class="form-row">
         <td>{{ formset.empty_form.work_date }}</td>
+        <td class="weekday-cell"></td>
         <td>{{ formset.empty_form.hours }}</td>
         <td>{{ formset.empty_form.description }}</td>
       </tr>
     </template>
   </fieldset>
 
-  <button type="submit" class="btn">Save</button>
+  <button type="submit" class="btn btn-primary btn-lg">
+    <i class="fas fa-save"></i> Save Invoice
+  </button>
 </form>
 
 <script>
@@ -153,6 +166,17 @@
       // Pre-fill dates automatically
       const dateInput = row.querySelector(`#id_${prefix}-${i}-work_date`);
       if (dateInput) setInputDate(dateInput, d);
+      
+      // Update weekday display
+      const weekdayCell = row.querySelector('td:nth-child(2)'); // Second column (Day)
+      if (weekdayCell) {
+        weekdayCell.className = 'weekday-cell';
+        weekdayCell.style.textAlign = 'center';
+        if (d) {
+          weekdayCell.textContent = d.toLocaleDateString('en-US', { weekday: 'long' });
+        }
+      }
+      
       tbody.appendChild(row);
     });
     if (total) total.value = dates.length;
@@ -203,8 +227,45 @@
   startI && startI.addEventListener("change", updateByDates);
   endI && endI.addEventListener("change", updateByDates);
 
+  // Add event listener for individual date changes to update weekday
+  tbody && tbody.addEventListener("change", function(e) {
+    if (e.target.type === "date") {
+      const row = e.target.closest("tr");
+      const weekdayCell = row.querySelector('td:nth-child(2)'); // Second column (Day)
+      
+      if (weekdayCell) {
+        weekdayCell.className = 'weekday-cell';
+        weekdayCell.style.textAlign = 'left';
+        
+        if (e.target.value) {
+          const date = new Date(e.target.value);
+          weekdayCell.textContent = date.toLocaleDateString('en-US', { weekday: 'long' });
+        } else {
+          weekdayCell.textContent = '';
+        }
+      }
+    }
+  });
+
   // Construcción inicial
   updateByType();
+  
+  // Force left alignment for all weekday cells
+  function forceLeftAlignment() {
+    const weekdayCells = document.querySelectorAll('td.weekday-cell, td:nth-child(2)');
+    weekdayCells.forEach(cell => {
+      cell.style.textAlign = 'left';
+      cell.style.setProperty('text-align', 'left', 'important');
+      cell.style.verticalAlign = 'middle';
+      cell.style.setProperty('vertical-align', 'middle', 'important');
+    });
+  }
+  
+  // Run immediately and after DOM changes
+  forceLeftAlignment();
+  setTimeout(forceLeftAlignment, 100);
+  setTimeout(forceLeftAlignment, 500);
 })();
+
 </script>
 {% endblock %}
