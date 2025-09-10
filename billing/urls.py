@@ -26,4 +26,9 @@ urlpatterns = [
     path("invoices/<int:pk>/mark-sent/", views.invoice_mark_sent, name="invoice_mark_sent"),
     path("invoices/<int:pk>/mark-paid/", views.invoice_mark_paid, name="invoice_mark_paid"),
     path("invoices/<int:pk>/duplicate/", views.invoice_duplicate, name="invoice_duplicate"),
+    
+    # Authentication URLs
+    path("login/", views.login_view, name="login"),
+    path("logout/", views.logout_view, name="logout"),
+    path("register/", views.register_view, name="register"),
 ]

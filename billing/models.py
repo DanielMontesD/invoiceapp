@@ -105,7 +105,7 @@ class Invoice(models.Model):
     
     # Legacy employee field removed - use client instead
 
-    invoice_number = models.CharField(max_length=20, unique=True, blank=True)
+    invoice_number = models.CharField(max_length=20, blank=True)
     client_name = models.CharField(max_length=120)
     client_email = models.EmailField(blank=True)
     period_type = models.CharField(
@@ -120,6 +120,7 @@ class Invoice(models.Model):
 
     class Meta:
         ordering = ["-id"]
+        unique_together = [['user', 'invoice_number']]
 
     def __str__(self):
         return f"Invoice {self.invoice_number or '(draft)'} - {self.client_name}"
@@ -129,11 +130,21 @@ class Invoice(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.invoice_number:
-            last = Invoice.objects.order_by("-id").first()
-            next_num = 1
-            if last and (last.invoice_number or "").isdigit():
-                next_num = int(last.invoice_number) + 1
-            self.invoice_number = f"{next_num:05d}"
+            # Generate invoice number per user
+            if self.user:
+                # Get the last invoice for this specific user
+                last = Invoice.objects.filter(user=self.user).order_by("-id").first()
+                next_num = 1
+                if last and (last.invoice_number or "").isdigit():
+                    next_num = int(last.invoice_number) + 1
+                self.invoice_number = f"{next_num:05d}"
+            else:
+                # Fallback for invoices without user (shouldn't happen with our current setup)
+                last = Invoice.objects.order_by("-id").first()
+                next_num = 1
+                if last and (last.invoice_number or "").isdigit():
+                    next_num = int(last.invoice_number) + 1
+                self.invoice_number = f"{next_num:05d}"
         super().save(*args, **kwargs)
 
     @property
