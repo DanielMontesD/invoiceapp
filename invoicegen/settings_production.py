@@ -23,13 +23,34 @@ INSTALLED_APPS = [
     'billing',
 ]
 
-# Database - Use SQLite for now to avoid complexity
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+# Database - Use Railway PostgreSQL if available, otherwise SQLite
+try:
+    # Try to use Railway's PostgreSQL database
+    if os.environ.get('DATABASE_URL'):
+        import dj_database_url
+        DATABASES = {
+            'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
+        }
+        print("Using PostgreSQL database from Railway")
+    else:
+        # Fallback to SQLite if no DATABASE_URL
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+            }
+        }
+        print("Using SQLite database")
+except Exception as e:
+    # Ultimate fallback to SQLite
+    print(f"Database configuration failed: {e}")
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        }
     }
-}
+    print("Using SQLite database as fallback")
 
 # Middleware configuration
 MIDDLEWARE = [
