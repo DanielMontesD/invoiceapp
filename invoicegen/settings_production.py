@@ -6,7 +6,7 @@ from decouple import config
 from .settings import *
 
 # Security settings
-DEBUG = True  # Temporalmente habilitado para debugging
+DEBUG = True  # Habilitado para desarrollo y configuración
 SECRET_KEY = config('SECRET_KEY', default='your-secret-key-here')
 ALLOWED_HOSTS = ['*']  # Permitir todos los hosts para Railway
 
@@ -29,6 +29,19 @@ else:
         }
     }
 
+# Middleware configuration
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "billing.middleware.BasicAuthMiddleware",  # Autenticación básica
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
 # Static files
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATIC_URL = '/static/'
@@ -37,16 +50,14 @@ STATICFILES_DIRS = [
 ]
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Security headers (temporarily disabled for testing)
-# SECURE_SSL_REDIRECT = True
-# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-# SESSION_COOKIE_SECURE = True
-# CSRF_COOKIE_SECURE = True
+# Security headers
+SECURE_SSL_REDIRECT = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 # CSRF configuration
 CSRF_TRUSTED_ORIGINS = ['https://*.railway.app']
-CSRF_COOKIE_SECURE = False  # Temporalmente deshabilitado para Railway
-SESSION_COOKIE_SECURE = False  # Temporalmente deshabilitado para Railway
 
 # Logging
 LOGGING = {
