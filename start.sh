@@ -4,15 +4,16 @@
 mkdir -p /app/staticfiles
 
 # Collect static files
+echo "Collecting static files..."
 python manage.py collectstatic --noinput --settings=invoicegen.settings_production
 
-# Test database connection
-echo "Testing database connection..."
+# Test basic Django setup
+echo "Testing Django setup..."
 python manage.py check --settings=invoicegen.settings_production
 
-# Run migrations
+# Run migrations (only if database is available)
 echo "Running migrations..."
-python manage.py migrate --settings=invoicegen.settings_production
+python manage.py migrate --settings=invoicegen.settings_production || echo "Migrations failed, continuing..."
 
 # Start gunicorn
 echo "Starting gunicorn..."

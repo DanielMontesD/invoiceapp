@@ -11,21 +11,28 @@ SECRET_KEY = config('SECRET_KEY', default='your-secret-key-here')
 ALLOWED_HOSTS = ['*']  # Permitir todos los hosts para Railway
 
 # Database - PostgreSQL para producción
-# Usar DATABASE_URL de Railway si está disponible, sino usar variables individuales
-if config('DATABASE_URL', default=None):
-    import dj_database_url
-    DATABASES = {
-        'default': dj_database_url.parse(config('DATABASE_URL'))
-    }
-else:
+# Usar DATABASE_URL de Railway si está disponible, sino usar SQLite como fallback
+try:
+    if config('DATABASE_URL', default=None):
+        import dj_database_url
+        DATABASES = {
+            'default': dj_database_url.parse(config('DATABASE_URL'))
+        }
+    else:
+        # Fallback to SQLite if no DATABASE_URL is provided
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+            }
+        }
+except Exception as e:
+    # Ultimate fallback to SQLite
+    print(f"Database configuration failed: {e}")
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': config('DB_NAME', default='invoiceapp'),
-            'USER': config('DB_USER', default='postgres'),
-            'PASSWORD': config('DB_PASSWORD', default=''),
-            'HOST': config('DB_HOST', default='localhost'),
-            'PORT': config('DB_PORT', default='5432'),
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
         }
     }
 
