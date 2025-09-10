@@ -20,8 +20,8 @@
 
   <div class="meta">
     <div><strong>Date Issued:</strong> {{ invoice.date_issued }}</div>
-    <div><strong>Period:</strong> {{ invoice.period_start }} – {{ invoice.period_end }} ({{ invoice.get_period_type_display }})</div>
-    <div><strong>Employee:</strong> {{ invoice.employee|default:"—" }}</div>
+    <div><strong>Period:</strong> {{ invoice.period_start }} – {{ invoice.period_end }}</div>
+    <div><strong>Employee:</strong> {{ invoice.client_name|default:"—" }}</div>
     {% if invoice.client_email %}<div><strong>Email:</strong> {{ invoice.client_email }}</div>{% endif %}
     <div><strong>Hourly Rate:</strong> ${{ invoice.hourly_rate }}</div>
   </div>

@@ -6,7 +6,9 @@
   {{ employee.email|default:"—" }} · Default rate: ${{ employee.default_hourly_rate }}
 </p>
 <p>
-  <a class="btn" href="{% url 'invoice_create_for_employee' employee.pk %}">New invoice for {{ employee.name }}</a>
+  <a class="btn btn-primary" href="{% url 'invoice_create_for_employee' employee.pk %}">
+    <i class="fas fa-plus"></i> New Invoice for {{ employee.name }}
+  </a>
 </p>
 
 <h2>Invoices</h2>
