@@ -23,3 +23,7 @@ media/
 
 # VS Code
 .vscode/
+
+# Production
+staticfiles/
+media/
