@@ -13,6 +13,8 @@ from .forms import InvoiceForm, WorkEntryFormSet, ClientForm, UserProfileForm
 from .models import Invoice, Client, WorkEntry, UserProfile
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.forms import UserCreationForm
 
 from io import BytesIO
 from xhtml2pdf import pisa
@@ -20,11 +22,13 @@ from xhtml2pdf import pisa
 
 # --- Client management views ---
 
+@login_required
 def client_list(request):
     """
     Display list of all clients with search and filtering capabilities.
+    Only shows clients belonging to the current user.
     """
-    clients = Client.objects.all()
+    clients = Client.objects.filter(user=request.user)
     
     # Search functionality
     search_query = request.GET.get('search', '')
@@ -48,11 +52,13 @@ def client_list(request):
     })
 
 
+@login_required
 def client_detail(request, pk):
     """
     Display client details and their associated invoices.
+    Only shows clients belonging to the current user.
     """
-    client = get_object_or_404(Client, pk=pk)
+    client = get_object_or_404(Client, pk=pk, user=request.user)
     invoices = client.invoices.all().order_by("-id")
     
     # Calculate total revenue from all invoices
@@ -65,6 +71,7 @@ def client_detail(request, pk):
     })
 
 
+@login_required
 def client_create(request):
     """
     Create a new client.
@@ -89,11 +96,13 @@ def client_create(request):
     })
 
 
+@login_required
 def client_edit(request, pk):
     """
     Edit an existing client.
+    Only allows editing clients belonging to the current user.
     """
-    client = get_object_or_404(Client, pk=pk)
+    client = get_object_or_404(Client, pk=pk, user=request.user)
     
     if request.method == "POST":
         form = ClientForm(request.POST, instance=client)
@@ -112,11 +121,13 @@ def client_edit(request, pk):
     })
 
 
+@login_required
 def client_delete(request, pk):
     """
     Delete a client (with confirmation).
+    Only allows deleting clients belonging to the current user.
     """
-    client = get_object_or_404(Client, pk=pk)
+    client = get_object_or_404(Client, pk=pk, user=request.user)
     
     if request.method == "POST":
         client_name = client.name
@@ -130,6 +141,7 @@ def client_delete(request, pk):
 
 
 # --- Legacy employee list view (for backward compatibility) ---
+@login_required
 def employee_list(request):
     """
     Legacy view - redirects to client_list for backward compatibility.
@@ -138,6 +150,7 @@ def employee_list(request):
 
 
 # --- Client detail view ---
+@login_required
 def employee_detail(request, pk):
     """
     Display client details and their associated invoices.
@@ -152,11 +165,13 @@ def employee_detail(request, pk):
 
 
 # --- Create invoice for specific client ---
+@login_required
 def invoice_create_for_employee(request, pk):
     """
     Create a new invoice for a specific client.
+    Only allows creating invoices for clients belonging to the current user.
     """
-    client = get_object_or_404(Client, pk=pk)
+    client = get_object_or_404(Client, pk=pk, user=request.user)
 
     if request.method == "POST":
         form = InvoiceForm(request.POST)
@@ -175,6 +190,9 @@ def invoice_create_for_employee(request, pk):
             invoice.client_email = client.email
             if not invoice.hourly_rate:
                 invoice.hourly_rate = client.default_hourly_rate
+            
+            # Assign to the current user
+            invoice.user = request.user
             
             # Save invoice first
             invoice.save()
@@ -244,14 +262,16 @@ def invoice_create_for_employee(request, pk):
     )
 
 
+@login_required
 def invoice_list(request):
-    # Show all invoices for now (will add user filtering later)
-    invoices = Invoice.objects.all()
+    # Show only invoices belonging to the current user
+    invoices = Invoice.objects.filter(user=request.user)
     return render(request, "billing/invoice_list.html", {"invoices": invoices})
 
 
+@login_required
 def invoice_detail(request, pk):
-    invoice = get_object_or_404(Invoice, pk=pk)
+    invoice = get_object_or_404(Invoice, pk=pk, user=request.user)
     return render(request, "billing/invoice_detail.html", {"invoice": invoice})
 
 
@@ -266,6 +286,7 @@ def monday_of(d: date) -> date:
     return d - timedelta(days=d.weekday())
 
 
+@login_required
 def invoice_create(request):
     if request.method == "POST":
         form = InvoiceForm(request.POST)
@@ -283,6 +304,9 @@ def invoice_create(request):
                 if not invoice.hourly_rate:
                     invoice.hourly_rate = client.default_hourly_rate
 
+            # Assign to the current user
+            invoice.user = request.user
+            
             # Save invoice first to get an ID
             invoice.save()
             
@@ -344,8 +368,9 @@ def invoice_create(request):
 
 
 # Creacion de invoices como PDF para poder ser enviados
+@login_required
 def invoice_pdf(request, pk):
-    invoice = get_object_or_404(Invoice, pk=pk)
+    invoice = get_object_or_404(Invoice, pk=pk, user=request.user)
     html = render_to_string("billing/invoice_pdf.html", {"invoice": invoice})
 
     result = BytesIO()
@@ -360,8 +385,9 @@ def invoice_pdf(request, pk):
     return resp
 
 
+@login_required
 def invoice_mark_sent(request, pk):
-    invoice = get_object_or_404(Invoice, pk=pk)
+    invoice = get_object_or_404(Invoice, pk=pk, user=request.user)
     if invoice.status == 'draft':
         invoice.status = 'sent'
         invoice.save()
@@ -370,8 +396,9 @@ def invoice_mark_sent(request, pk):
     return redirect('client_detail', pk=invoice.client.pk)
 
 
+@login_required
 def invoice_mark_paid(request, pk):
-    invoice = get_object_or_404(Invoice, pk=pk)
+    invoice = get_object_or_404(Invoice, pk=pk, user=request.user)
     if invoice.status == 'sent':
         invoice.status = 'paid'
         invoice.save()
@@ -380,12 +407,14 @@ def invoice_mark_paid(request, pk):
     return redirect('client_detail', pk=invoice.client.pk)
 
 
+@login_required
 def invoice_duplicate(request, pk):
-    original_invoice = get_object_or_404(Invoice, pk=pk)
+    original_invoice = get_object_or_404(Invoice, pk=pk, user=request.user)
     
     # Create a copy of the invoice
     new_invoice = Invoice.objects.create(
-        employee=original_invoice.employee,
+        user=request.user,  # Assign to current user
+        client=original_invoice.client,  # Use client instead of employee
         client_name=original_invoice.client_name,
         client_email=original_invoice.client_email,
         period_type=original_invoice.period_type,
@@ -407,3 +436,49 @@ def invoice_duplicate(request, pk):
     
     messages.success(request, f"Invoice duplicated. New invoice: {new_invoice.invoice_number}")
     return redirect('invoice_detail', pk=new_invoice.pk)
+
+
+# Authentication views
+def login_view(request):
+    """
+    Simple login view for the application.
+    """
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('client_list')
+        else:
+            messages.error(request, 'Invalid username or password.')
+    
+    return render(request, 'billing/login.html')
+
+
+def logout_view(request):
+    """
+    Logout view.
+    """
+    logout(request)
+    return redirect('login')
+
+
+def register_view(request):
+    """
+    Simple registration view.
+    """
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password1')
+            user = authenticate(username=username, password=password)
+            if user:
+                login(request, user)
+                return redirect('client_list')
+    else:
+        form = UserCreationForm()
+    
+    return render(request, 'billing/register.html', {'form': form})

@@ -19,10 +19,23 @@
 </head>
 <body>
   <header>
-    <a class="btn btn-outline-primary" href="{% url 'dashboard' %}">Dashboard</a>
-    <a class="btn btn-outline-primary" href="{% url 'client_list' %}">Clients</a>
-    <a class="btn btn-outline-primary" href="{% url 'invoice_list' %}">Invoices</a>
-    <a class="btn btn-primary" href="{% url 'invoice_create' %}">New Invoice</a>
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <a class="btn btn-outline-primary" href="{% url 'dashboard' %}">Dashboard</a>
+        <a class="btn btn-outline-primary" href="{% url 'client_list' %}">Clients</a>
+        <a class="btn btn-outline-primary" href="{% url 'invoice_list' %}">Invoices</a>
+        <a class="btn btn-primary" href="{% url 'invoice_create' %}">New Invoice</a>
+      </div>
+      <div>
+        {% if user.is_authenticated %}
+          <span class="text-muted me-3">Welcome, {{ user.username }}</span>
+          <a class="btn btn-outline-secondary" href="{% url 'logout' %}">Logout</a>
+        {% else %}
+          <a class="btn btn-outline-primary" href="{% url 'login' %}">Login</a>
+          <a class="btn btn-primary" href="{% url 'register' %}">Register</a>
+        {% endif %}
+      </div>
+    </div>
   </header>
 
   {% if messages %}
