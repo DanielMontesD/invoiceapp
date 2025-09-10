@@ -72,7 +72,11 @@ def client_create(request):
     if request.method == "POST":
         form = ClientForm(request.POST)
         if form.is_valid():
-            client = form.save()
+            client = form.save(commit=False)
+            # Assign to the current user if authenticated, otherwise leave as None
+            if request.user.is_authenticated:
+                client.user = request.user
+            client.save()
             messages.success(request, f"Client '{client.name}' created successfully.")
             return redirect("client_detail", pk=client.pk)
     else:

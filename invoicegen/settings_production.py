@@ -6,9 +6,9 @@ from decouple import config
 from .settings import *
 
 # Security settings
-DEBUG = False
+DEBUG = True  # Temporalmente habilitado para debugging
 SECRET_KEY = config('SECRET_KEY', default='your-secret-key-here')
-ALLOWED_HOSTS = ['*']  # Cambiar por tu dominio específico en producción
+ALLOWED_HOSTS = ['*']  # Permitir todos los hosts para Railway
 
 # Database - PostgreSQL para producción
 # Usar DATABASE_URL de Railway si está disponible, sino usar variables individuales
@@ -42,6 +42,11 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # SESSION_COOKIE_SECURE = True
 # CSRF_COOKIE_SECURE = True
+
+# CSRF configuration
+CSRF_TRUSTED_ORIGINS = ['https://*.railway.app']
+CSRF_COOKIE_SECURE = False  # Temporalmente deshabilitado para Railway
+SESSION_COOKIE_SECURE = False  # Temporalmente deshabilitado para Railway
 
 # Logging
 LOGGING = {
