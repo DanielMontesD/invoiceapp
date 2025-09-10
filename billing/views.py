@@ -22,7 +22,8 @@ from xhtml2pdf import pisa
 # Simple health check view for Railway
 def health_check(request):
     """Simple health check endpoint for Railway deployment"""
-    return JsonResponse({"status": "ok", "message": "Invoice App is running"})
+    # Return a simple HTTP 200 response without any dependencies
+    return HttpResponse("OK", content_type="text/plain")
 
 
 # --- Client management views ---
