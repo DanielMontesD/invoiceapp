@@ -3,11 +3,26 @@
 {% block content %}
 <h1>Invoice {{ invoice.invoice_number }}</h1>
 
-<p><strong>Employee:</strong> {{ invoice.employee|default:"—" }}</p>
-<p class="muted">{{ invoice.client_email }}</p> 
-<p><strong>Period:</strong> {{ invoice.period_start }} → {{ invoice.period_end }} ({{ invoice.get_period_type_display }})</p>
-<p><strong>Issued:</strong> {{ invoice.date_issued }}</p>
-<p><strong>Hourly rate:</strong> ${{ invoice.hourly_rate }}</p>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+  <div>
+    <p><strong>Employee:</strong> {{ invoice.employee|default:"—" }}</p>
+    <p class="muted">{{ invoice.client_email }}</p> 
+    <p><strong>Period:</strong> {{ invoice.period_start }} → {{ invoice.period_end }} ({{ invoice.get_period_type_display }})</p>
+    <p><strong>Issued:</strong> {{ invoice.date_issued }}</p>
+    <p><strong>Hourly rate:</strong> ${{ invoice.hourly_rate }}</p>
+  </div>
+  <div>
+    <p><strong>Status:</strong> 
+      <span style="padding: 4px 8px; border-radius: 4px; color: white; background-color: 
+        {% if invoice.status == 'draft' %}orange
+        {% elif invoice.status == 'sent' %}blue
+        {% elif invoice.status == 'paid' %}green
+        {% else %}red{% endif %};">
+        {{ invoice.get_status_display }}
+      </span>
+    </p>
+  </div>
+</div>
 
 <table>
   <thead>
@@ -48,7 +63,19 @@
 {% if invoice.notes %}
 <p><strong>Notes:</strong> {{ invoice.notes }}</p>
 {% endif %}
-<p>
-  <a class="btn" href="{% url 'invoice_pdf' invoice.pk %}">Download PDF</a>
-</p>
+
+<div style="margin-top: 20px;">
+  <h3>Actions</h3>
+  <p>
+    <a class="btn" href="{% url 'invoice_pdf' invoice.pk %}">Download PDF</a>
+    
+    {% if invoice.status == 'draft' %}
+      <a class="btn" href="{% url 'invoice_mark_sent' invoice.pk %}" style="background-color: #007bff; color: white;">Mark as Sent</a>
+    {% elif invoice.status == 'sent' %}
+      <a class="btn" href="{% url 'invoice_mark_paid' invoice.pk %}" style="background-color: #28a745; color: white;">Mark as Paid</a>
+    {% endif %}
+    
+    <a class="btn" href="{% url 'invoice_duplicate' invoice.pk %}" style="background-color: #6c757d; color: white;">Duplicate Invoice</a>
+  </p>
+</div>
 {% endblock %}

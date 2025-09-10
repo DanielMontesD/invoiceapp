@@ -9,7 +9,7 @@ from django.http import HttpResponse
 from django.template.loader import render_to_string
 
 from .forms import InvoiceForm, WorkEntryFormSet
-from .models import Invoice, Employee
+from .models import Invoice, Employee, WorkEntry
 
 from io import BytesIO
 from xhtml2pdf import pisa
@@ -181,3 +181,50 @@ def invoice_pdf(request, pk):
     resp = HttpResponse(result.getvalue(), content_type="application/pdf")
     resp["Content-Disposition"] = f'attachment; filename="{filename}"'
     return resp
+
+
+def invoice_mark_sent(request, pk):
+    invoice = get_object_or_404(Invoice, pk=pk)
+    if invoice.status == 'draft':
+        invoice.status = 'sent'
+        invoice.save()
+        messages.success(request, f"Invoice {invoice.invoice_number} marked as sent.")
+    return redirect('invoice_detail', pk=pk)
+
+
+def invoice_mark_paid(request, pk):
+    invoice = get_object_or_404(Invoice, pk=pk)
+    if invoice.status == 'sent':
+        invoice.status = 'paid'
+        invoice.save()
+        messages.success(request, f"Invoice {invoice.invoice_number} marked as paid.")
+    return redirect('invoice_detail', pk=pk)
+
+
+def invoice_duplicate(request, pk):
+    original_invoice = get_object_or_404(Invoice, pk=pk)
+    
+    # Create a copy of the invoice
+    new_invoice = Invoice.objects.create(
+        employee=original_invoice.employee,
+        client_name=original_invoice.client_name,
+        client_email=original_invoice.client_email,
+        period_type=original_invoice.period_type,
+        period_start=original_invoice.period_start,
+        period_end=original_invoice.period_end,
+        hourly_rate=original_invoice.hourly_rate,
+        status='draft',
+        notes=original_invoice.notes,
+    )
+    
+    # Copy work entries
+    for work_entry in original_invoice.work_entries.all():
+        WorkEntry.objects.create(
+            invoice=new_invoice,
+            work_date=work_entry.work_date,
+            hours=work_entry.hours,
+            description=work_entry.description,
+        )
+    
+    messages.success(request, f"Invoice duplicated. New invoice: {new_invoice.invoice_number}")
+    return redirect('invoice_detail', pk=new_invoice.pk)
