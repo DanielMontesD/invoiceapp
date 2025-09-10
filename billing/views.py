@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.forms import inlineformset_factory
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
 
 from .forms import InvoiceForm, WorkEntryFormSet, ClientForm, UserProfileForm
@@ -18,6 +18,11 @@ from django.contrib.auth.forms import UserCreationForm
 
 from io import BytesIO
 from xhtml2pdf import pisa
+
+# Simple health check view for Railway
+def health_check(request):
+    """Simple health check endpoint for Railway deployment"""
+    return JsonResponse({"status": "ok", "message": "Invoice App is running"})
 
 
 # --- Client management views ---

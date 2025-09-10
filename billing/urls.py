@@ -2,8 +2,11 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Health check for Railway
+    path("", views.health_check, name="health_check"),
+    
     # Dashboard (redirect to client list for now)
-    path("", views.client_list, name="dashboard"),
+    path("dashboard/", views.client_list, name="dashboard"),
     
     # Client management (new)
     path("clients/", views.client_list, name="client_list"),
