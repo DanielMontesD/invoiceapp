@@ -2,63 +2,209 @@ from datetime import date, timedelta
 from calendar import monthrange
 
 from django.contrib import messages
+from django.db.models import Q
 from django.forms import inlineformset_factory
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 
-from .forms import InvoiceForm, WorkEntryFormSet
-from .models import Invoice, Employee, WorkEntry
+from .forms import InvoiceForm, WorkEntryFormSet, ClientForm, UserProfileForm
+from .models import Invoice, Client, WorkEntry, UserProfile
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 
 from io import BytesIO
 from xhtml2pdf import pisa
 
 
-# --- NUEVA: lista de empleados ---
+# --- Client management views ---
+
+def client_list(request):
+    """
+    Display list of all clients with search and filtering capabilities.
+    """
+    clients = Client.objects.all()
+    
+    # Search functionality
+    search_query = request.GET.get('search', '')
+    if search_query:
+        clients = clients.filter(
+            Q(name__icontains=search_query) | 
+            Q(email__icontains=search_query)
+        )
+    
+    # Filter by active status
+    status_filter = request.GET.get('status', '')
+    if status_filter == 'active':
+        clients = clients.filter(is_active=True)
+    elif status_filter == 'inactive':
+        clients = clients.filter(is_active=False)
+    
+    return render(request, "billing/client_list.html", {
+        "clients": clients,
+        "search_query": search_query,
+        "status_filter": status_filter,
+    })
+
+
+def client_detail(request, pk):
+    """
+    Display client details and their associated invoices.
+    """
+    client = get_object_or_404(Client, pk=pk)
+    invoices = client.invoices.all().order_by("-id")
+    
+    return render(request, "billing/client_detail.html", {
+        "client": client,
+        "invoices": invoices,
+    })
+
+
+def client_create(request):
+    """
+    Create a new client.
+    """
+    if request.method == "POST":
+        form = ClientForm(request.POST)
+        if form.is_valid():
+            client = form.save()
+            messages.success(request, f"Client '{client.name}' created successfully.")
+            return redirect("client_detail", pk=client.pk)
+    else:
+        form = ClientForm()
+    
+    return render(request, "billing/client_form.html", {
+        "form": form,
+        "title": "Create New Client",
+        "submit_text": "Create Client",
+    })
+
+
+def client_edit(request, pk):
+    """
+    Edit an existing client.
+    """
+    client = get_object_or_404(Client, pk=pk)
+    
+    if request.method == "POST":
+        form = ClientForm(request.POST, instance=client)
+        if form.is_valid():
+            client = form.save()
+            messages.success(request, f"Client '{client.name}' updated successfully.")
+            return redirect("client_detail", pk=client.pk)
+    else:
+        form = ClientForm(instance=client)
+    
+    return render(request, "billing/client_form.html", {
+        "form": form,
+        "client": client,
+        "title": f"Edit Client: {client.name}",
+        "submit_text": "Update Client",
+    })
+
+
+def client_delete(request, pk):
+    """
+    Delete a client (with confirmation).
+    """
+    client = get_object_or_404(Client, pk=pk)
+    
+    if request.method == "POST":
+        client_name = client.name
+        client.delete()
+        messages.success(request, f"Client '{client_name}' deleted successfully.")
+        return redirect("client_list")
+    
+    return render(request, "billing/client_confirm_delete.html", {
+        "client": client,
+    })
+
+
+# --- Legacy employee list view (for backward compatibility) ---
 def employee_list(request):
-    employees = Employee.objects.all()
-    return render(request, "billing/employee_list.html", {"employees": employees})
+    """
+    Legacy view - redirects to client_list for backward compatibility.
+    """
+    return redirect("client_list")
 
 
-# --- NUEVA: detalle del empleado + sus invoices ---
+# --- Client detail view ---
 def employee_detail(request, pk):
-    employee = get_object_or_404(Employee, pk=pk)
-    invoices = employee.invoices.all().order_by("-id")
+    """
+    Display client details and their associated invoices.
+    """
+    client = get_object_or_404(Client, pk=pk)
+    invoices = client.invoices.all().order_by("-id")
     return render(
         request,
         "billing/employee_detail.html",
-        {"employee": employee, "invoices": invoices},
+        {"employee": client, "invoices": invoices},  # Keep 'employee' for template compatibility
     )
 
 
-# --- NUEVA: crear invoice para un empleado concreto ---
+# --- Create invoice for specific client ---
 def invoice_create_for_employee(request, pk):
-    employee = get_object_or_404(Employee, pk=pk)
+    """
+    Create a new invoice for a specific client.
+    """
+    client = get_object_or_404(Client, pk=pk)
 
     if request.method == "POST":
         form = InvoiceForm(request.POST)
-        # fuerzo el empleado en servidor aunque el select no se envíe (lo desactivamos en GET)
+        
+        # Debug: print form data
+        print(f"Form data: {request.POST}")
+        print(f"Form is valid: {form.is_valid()}")
+        if not form.is_valid():
+            print(f"Form errors: {form.errors}")
+        
         if form.is_valid():
+            # Create invoice with client data
             invoice = form.save(commit=False)
-            invoice.employee = employee
-            invoice.client_name = employee.name
-            invoice.client_email = employee.email
+            invoice.client = client
+            invoice.client_name = client.name
+            invoice.client_email = client.email
             if not invoice.hourly_rate:
-                invoice.hourly_rate = employee.default_hourly_rate
+                invoice.hourly_rate = client.default_hourly_rate
+            
+            # Save invoice first
+            invoice.save()
+            print(f"Invoice saved with ID: {invoice.pk}")
+            
+            # Handle work entries
             formset = WorkEntryFormSet(request.POST, instance=invoice)
-            if formset.is_valid():
-                invoice.save()
-                formset.save()
-                messages.success(request, "Invoice created successfully.")
-                return redirect("invoice_detail", pk=invoice.pk)
+            
+            # Handle work entries manually without formset validation
+            saved_entries = 0
+            for i in range(int(request.POST.get('work_entries-TOTAL_FORMS', 0))):
+                work_date = request.POST.get(f'work_entries-{i}-work_date')
+                hours = request.POST.get(f'work_entries-{i}-hours')
+                description = request.POST.get(f'work_entries-{i}-description')
+                
+                # Only save if there's meaningful data
+                if work_date and (hours or description):
+                    work_entry = WorkEntry(
+                        invoice=invoice,
+                        work_date=work_date,
+                        hours=float(hours) if hours else 0.0,
+                        description=description or ''
+                    )
+                    work_entry.save()
+                    saved_entries += 1
+            
+            if saved_entries > 0:
+                messages.success(request, f"Invoice created successfully with {saved_entries} work entries.")
+            else:
+                messages.success(request, "Invoice created successfully. You can add work entries later.")
+            return redirect("invoice_detail", pk=invoice.pk)
         else:
-            formset = WorkEntryFormSet(request.POST)
+            formset = WorkEntryFormSet()
 
         return render(
             request,
             "billing/invoice_form.html",
-            {"form": form, "formset": formset, "fixed_employee": employee},
+            {"form": form, "formset": formset, "fixed_employee": client},
         )
 
     # GET: inicializamos con weekly y el hourly del empleado
@@ -68,27 +214,30 @@ def invoice_create_for_employee(request, pk):
 
     form = InvoiceForm(
         initial={
-            "employee": employee.pk,  # preseleccionado en el form
+            "client": client.pk,  # Pre-selected in the form
+            "client_name": client.name,
+            "client_email": client.email,
             "period_type": "weekly",
             "period_start": start,
             "period_end": end,
-            "hourly_rate": employee.default_hourly_rate,  # 👈 default del empleado
+            "hourly_rate": client.default_hourly_rate,  # Client's default rate
         }
     )
-    # desactivar visualmente el selector para evitar que cambien de empleado
-    if "employee" in form.fields:
-        form.fields["employee"].disabled = True
+    # Disable the client selector to prevent changing clients
+    if "client" in form.fields:
+        form.fields["client"].disabled = True
 
     formset = WorkEntryFormSet()  # filas las genera el JS del template
 
     return render(
         request,
         "billing/invoice_form.html",
-        {"form": form, "formset": formset, "fixed_employee": employee},
+        {"form": form, "formset": formset, "fixed_employee": client},
     )
 
 
 def invoice_list(request):
+    # Show all invoices for now (will add user filtering later)
     invoices = Invoice.objects.all()
     return render(request, "billing/invoice_list.html", {"invoices": invoices})
 
@@ -114,27 +263,47 @@ def invoice_create(request):
         form = InvoiceForm(request.POST)
 
         if form.is_valid():
-            # Creamos el invoice sin guardar aún
+            # Create invoice without saving yet
             invoice = form.save(commit=False)
 
-            # Si hay empleado seleccionado, copiamos snapshot de name/email
-            if invoice.employee_id:
-                emp = invoice.employee
-                invoice.client_name = emp.name
-                invoice.client_email = emp.email
-                # Si no se indicó tarifa, usar la del empleado
+            # If there's a client selected, copy snapshot of name/email
+            if invoice.client_id:
+                client = invoice.client
+                invoice.client_name = client.name
+                invoice.client_email = client.email
+                # If no hourly rate specified, use client's default
                 if not invoice.hourly_rate:
-                    invoice.hourly_rate = emp.default_hourly_rate
+                    invoice.hourly_rate = client.default_hourly_rate
 
-            # Formset ligado al invoice (aún no guardado)
+            # Save invoice first to get an ID
+            invoice.save()
+            
+            # Formset linked to the invoice
             formset = WorkEntryFormSet(request.POST, instance=invoice)
 
-            if formset.is_valid():
-                invoice.save()
-                formset.save()
-                messages.success(request, "Invoice created successfully.")
-                return redirect("invoice_detail", pk=invoice.pk)
-            # Si el formset NO es válido, caemos al render de abajo con form y formset ligados
+            # Handle work entries manually without formset validation
+            saved_entries = 0
+            for i in range(int(request.POST.get('work_entries-TOTAL_FORMS', 0))):
+                work_date = request.POST.get(f'work_entries-{i}-work_date')
+                hours = request.POST.get(f'work_entries-{i}-hours')
+                description = request.POST.get(f'work_entries-{i}-description')
+                
+                # Only save if there's meaningful data
+                if work_date and (hours or description):
+                    work_entry = WorkEntry(
+                        invoice=invoice,
+                        work_date=work_date,
+                        hours=float(hours) if hours else 0.0,
+                        description=description or ''
+                    )
+                    work_entry.save()
+                    saved_entries += 1
+            
+            if saved_entries > 0:
+                messages.success(request, f"Invoice created successfully with {saved_entries} work entries.")
+            else:
+                messages.success(request, "Invoice created successfully. You can add work entries later.")
+            return redirect("invoice_detail", pk=invoice.pk)
 
         else:
             # Si el form principal NO es válido, construimos el formset para no perder filas

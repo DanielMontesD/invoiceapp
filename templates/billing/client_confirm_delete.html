@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Delete Client{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Delete Client</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-warning"></i>
+                        <strong>Warning:</strong> This action cannot be undone. All invoices associated with this client will remain in the system but will no longer be linked to a client.
+                    </div>
+
+                    <div class="mb-4">
+                        <h5>Client Information:</h5>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <p><strong>Name:</strong> {{ client.name }}</p>
+                                <p><strong>Email:</strong> 
+                                    {% if client.email %}
+                                        {{ client.email }}
+                                    {% else %}
+                                        <span class="text-muted">Not provided</span>
+                                    {% endif %}
+                                </p>
+                                <p><strong>Hourly Rate:</strong> ${{ client.default_hourly_rate }}</p>
+                                <p><strong>Status:</strong> 
+                                    {% if client.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                </p>
+                                <p><strong>Invoices:</strong> {{ client.invoices.count }} invoice{{ client.invoices.count|pluralize }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if client.invoices.count > 0 %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Note:</strong> This client has {{ client.invoices.count }} invoice{{ client.invoices.count|pluralize }}. 
+                            These invoices will remain in the system but will no longer be associated with this client.
+                        </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'client_detail' client.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Yes, Delete Client
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
