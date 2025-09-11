@@ -6,7 +6,7 @@ from decouple import config
 from .settings import *
 
 # Security settings
-DEBUG = True  # Temporalmente habilitado para debugging
+DEBUG = False  # Deshabilitado para producción
 SECRET_KEY = config('SECRET_KEY', default='your-secret-key-here')
 ALLOWED_HOSTS = ['*']  # Permitir todos los hosts para Railway
 
