@@ -21,7 +21,7 @@
       <tr>
         <td><a href="{% url 'invoice_detail' inv.pk %}">{{ inv.invoice_number }}</a></td>
         <td>
-          {{ inv.client_name }}
+          {{ inv.client.name }}
           {% if inv.client_email %}<div class="muted">{{ inv.client_email }}</div>{% endif %}
         </td>
         <td>

@@ -5,7 +5,7 @@
 
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
   <div>
-    <p><strong>Employee:</strong> {{ invoice.client_name|default:"—" }}</p>
+    <p><strong>Employee:</strong> {{ invoice.client.name|default:"—" }}</p>
     <p class="muted">{{ invoice.client_email }}</p> 
     <p><strong>Period:</strong> {{ invoice.period_start }} → {{ invoice.period_end }} ({{ invoice.get_period_type_display }})</p>
     <p><strong>Issued:</strong> {{ invoice.date_issued }}</p>
