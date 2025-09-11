@@ -1,14 +1,9 @@
 from django.urls import path
-from django.shortcuts import redirect
 from . import views
 
-def root_redirect(request):
-    """Redirect root URL to dashboard"""
-    return redirect('dashboard')
-
 urlpatterns = [
-    # Root URL redirects to dashboard
-    path("", root_redirect, name="root"),
+    # Root URL shows health check (for Railway)
+    path("", views.health_check, name="root"),
     
     # Health check for Railway (moved to /health/)
     path("health/", views.health_check, name="health_check"),
