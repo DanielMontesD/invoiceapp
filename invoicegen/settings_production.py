@@ -48,6 +48,11 @@ CSRF_TRUSTED_ORIGINS = ['https://*.railway.app']
 CSRF_COOKIE_SECURE = False  # Temporalmente deshabilitado para Railway
 SESSION_COOKIE_SECURE = False  # Temporalmente deshabilitado para Railway
 
+# Login URLs
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/dashboard/'
+LOGOUT_REDIRECT_URL = '/login/'
+
 # Logging
 LOGGING = {
     'version': 1,
