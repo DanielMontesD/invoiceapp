@@ -33,6 +33,7 @@ def client_list(request):
     """
     Display list of all clients with search and filtering capabilities.
     Only shows clients belonging to the current user.
+    By default, only shows active clients.
     """
     clients = Client.objects.filter(user=request.user)
     
@@ -44,12 +45,13 @@ def client_list(request):
             Q(email__icontains=search_query)
         )
     
-    # Filter by active status
-    status_filter = request.GET.get('status', '')
+    # Filter by active status - default to active only
+    status_filter = request.GET.get('status', 'active')
     if status_filter == 'active':
         clients = clients.filter(is_active=True)
     elif status_filter == 'inactive':
         clients = clients.filter(is_active=False)
+    # If 'all' is selected, show both active and inactive
     
     return render(request, "billing/client_list.html", {
         "clients": clients,
@@ -130,15 +132,16 @@ def client_edit(request, pk):
 @login_required
 def client_delete(request, pk):
     """
-    Delete a client (with confirmation).
+    Soft delete a client (mark as inactive).
     Only allows deleting clients belonging to the current user.
     """
     client = get_object_or_404(Client, pk=pk, user=request.user)
     
     if request.method == "POST":
         client_name = client.name
-        client.delete()
-        messages.success(request, f"Client '{client_name}' deleted successfully.")
+        client.is_active = False  # Soft delete
+        client.save()
+        messages.success(request, f"Client '{client_name}' deactivated successfully.")
         return redirect("client_list")
     
     return render(request, "billing/client_confirm_delete.html", {
