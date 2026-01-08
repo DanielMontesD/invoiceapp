@@ -63,7 +63,8 @@
 </tfoot>
 </table>
 {% if invoice.notes %}
-<p><strong>Notes:</strong> {{ invoice.notes }}</p>
+<p><strong>Notes:</strong></p>
+<p>{{ invoice.notes|linebreaksbr }}</p>
 {% endif %}
 
 <div style="margin-top: 20px;">
