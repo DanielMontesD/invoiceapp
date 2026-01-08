@@ -65,7 +65,8 @@
   </table>
 
   {% if invoice.notes %}
-    <p><strong>Notes:</strong> {{ invoice.notes }}</p>
+    <div><strong>Notes:</strong></div>
+    <p>{{ invoice.notes|linebreaksbr }}</p>
   {% endif %}
 </body>
 </html>
