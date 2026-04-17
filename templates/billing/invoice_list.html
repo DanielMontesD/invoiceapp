@@ -8,16 +8,17 @@
 
 <div class="card">
   {% if invoices %}
+    <div class="table-responsive">
     <table class="table">
       <thead>
         <tr>
           <th>Invoice #</th>
           <th>Client</th>
-          <th>Period</th>
+          <th class="d-none d-md-table-cell">Period</th>
           <th>Status</th>
-          <th>Hours</th>
+          <th class="d-none d-md-table-cell">Hours</th>
           <th>Amount</th>
-          <th>Issued</th>
+          <th class="d-none d-md-table-cell">Issued</th>
           <th></th>
         </tr>
       </thead>
@@ -26,7 +27,7 @@
         <tr>
           <td><a href="{% url 'invoice_detail' inv.pk %}" style="color:var(--color-accent);text-decoration:none;font-weight:500;">{{ inv.invoice_number }}</a></td>
           <td>{{ inv.client_name|default:"—" }}</td>
-          <td style="color:var(--color-muted);">{{ inv.period_start|date:"M d" }} – {{ inv.period_end|date:"M d, Y" }}</td>
+          <td class="d-none d-md-table-cell" style="color:var(--color-muted);">{{ inv.period_start|date:"M d" }} – {{ inv.period_end|date:"M d, Y" }}</td>
           <td>
             <form method="post" action="{% url 'invoice_change_status' inv.pk %}" style="display:inline;">
               {% csrf_token %}
@@ -39,9 +40,9 @@
               </select>
             </form>
           </td>
-          <td>{{ inv.total_hours }}h</td>
+          <td class="d-none d-md-table-cell">{{ inv.total_hours }}h</td>
           <td style="font-weight:500;">${{ inv.total_amount|floatformat:2 }}</td>
-          <td style="color:var(--color-muted);">{{ inv.date_issued|date:"M d, Y" }}</td>
+          <td class="d-none d-md-table-cell" style="color:var(--color-muted);">{{ inv.date_issued|date:"M d, Y" }}</td>
           <td>
             <div class="d-flex gap-2">
               <a href="{% url 'invoice_detail' inv.pk %}" class="btn btn-sm btn-outline-secondary">View</a>
@@ -52,6 +53,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   {% else %}
     <div class="card-body text-center py-5">
       <i class="fas fa-file-invoice fa-2x text-muted mb-3 d-block"></i>

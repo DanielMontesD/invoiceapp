@@ -35,11 +35,11 @@
             {{ form.period_type }}
           </div>
           <div class="row g-2 mb-3">
-            <div class="col-6">
+            <div class="col-12 col-sm-6">
               <label class="form-label">Start</label>
               {{ form.period_start }}
             </div>
-            <div class="col-6">
+            <div class="col-12 col-sm-6">
               <label class="form-label">End</label>
               {{ form.period_end }}
             </div>
@@ -69,6 +69,7 @@
 
         {{ formset.management_form }}
 
+        <div class="table-responsive">
         <table class="table" id="entries-table">
           <thead>
             <tr>
@@ -91,6 +92,8 @@
             {% endif %}
           </tbody>
         </table>
+
+        </div>
 
         <template id="empty-row">
           <tr class="form-row">

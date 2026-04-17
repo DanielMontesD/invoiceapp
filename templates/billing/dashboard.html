@@ -115,12 +115,13 @@
     <a href="{% url 'invoice_list' %}" class="btn btn-sm btn-outline-secondary">View All</a>
   </div>
   {% if recent_invoices %}
+    <div class="table-responsive">
     <table class="table table-hover mb-0">
       <thead>
         <tr>
           <th>Invoice #</th>
           <th>Client</th>
-          <th>Period</th>
+          <th class="d-none d-md-table-cell">Period</th>
           <th>Status</th>
           <th class="text-end">Amount</th>
           <th></th>
@@ -131,7 +132,7 @@
         <tr>
           <td><a href="{% url 'invoice_detail' inv.pk %}" style="color:var(--color-accent);text-decoration:none;font-weight:500;">{{ inv.invoice_number }}</a></td>
           <td>{{ inv.client_name|default:"—" }}</td>
-          <td style="color:var(--color-muted);font-size:13px;">{{ inv.period_start|date:"M d" }} – {{ inv.period_end|date:"M d, Y" }}</td>
+          <td class="d-none d-md-table-cell" style="color:var(--color-muted);font-size:13px;">{{ inv.period_start|date:"M d" }} – {{ inv.period_end|date:"M d, Y" }}</td>
           <td>
             <form method="post" action="{% url 'invoice_change_status' inv.pk %}" style="display:inline;">
               {% csrf_token %}
