@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Create staticfiles directory
-mkdir -p /app/staticfiles
+mkdir -p staticfiles
 
 # Collect static files
 echo "Collecting static files..."

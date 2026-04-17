@@ -124,3 +124,18 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Auth URLs
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/dashboard/'
+LOGOUT_REDIRECT_URL = '/login/'
+
+# Support Supabase / PostgreSQL in dev via DATABASE_URL
+_db_url = config('DATABASE_URL', default=None)
+if _db_url:
+    import dj_database_url
+    DATABASES = {'default': dj_database_url.parse(_db_url)}
+
+# Email — dev uses console backend (reset emails print to terminal)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@invoiceapp.local'

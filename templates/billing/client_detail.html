@@ -95,7 +95,7 @@
                                 </div>
                                 <div class="col-6">
                                     <h3 class="text-success">${{ total_revenue|floatformat:2 }}</h3>
-                                    <p class="text-muted mb-0">Total Revenue</p>
+                                    <p class="text-muted mb-0">Total Paid</p>
                                 </div>
                             </div>
                         </div>
@@ -106,98 +106,54 @@
             <!-- Invoices Section -->
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-file-invoice"></i> Recent Invoices</h5>
-                    <a href="{% url 'invoice_create_for_client' client.pk %}" class="btn btn-sm btn-primary">
-                        <i class="fas fa-plus"></i> New Invoice
-                    </a>
+                    <h5 class="mb-0">Invoices</h5>
+                    <a href="{% url 'invoice_create_for_client' client.pk %}" class="btn btn-sm btn-primary">+ New Invoice</a>
                 </div>
-                <div class="card-body">
-                    {% if invoices %}
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Invoice #</th>
-                                        <th>Period</th>
-                                        <th>Status</th>
-                                        <th>Hours</th>
-                                        <th>Amount</th>
-                                        <th>Issued</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for invoice in invoices %}
-                                    <tr>
-                                        <td>
-                                            <a href="{% url 'invoice_detail' invoice.pk %}" class="text-decoration-none">
-                                                {{ invoice.invoice_number }}
-                                            </a>
-                                        </td>
-                                        <td>
-                                            {{ invoice.period_start|date:"M d" }} - {{ invoice.period_end|date:"M d, Y" }}
-                                        </td>
-                                        <td>
-                                            {% if invoice.status == 'draft' %}
-                                                <span class="badge bg-warning">Draft</span>
-                                            {% elif invoice.status == 'sent' %}
-                                                <span class="badge bg-primary">Sent</span>
-                                            {% elif invoice.status == 'paid' %}
-                                                <span class="badge bg-success">Paid</span>
-                                            {% elif invoice.status == 'overdue' %}
-                                                <span class="badge bg-danger">Overdue</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>{{ invoice.total_hours }}h</td>
-                                        <td>${{ invoice.total_amount }}</td>
-                                        <td>{{ invoice.date_issued|date:"M d, Y" }}</td>
-                                        <td>
-                                            <div class="btn-group status-actions" role="group">
-                                                <a href="{% url 'invoice_detail' invoice.pk %}" 
-                                                   class="btn btn-sm btn-outline-primary" title="View Invoice">
-                                                    <i class="fas fa-eye"></i> View Invoice
-                                                </a>
-                                                <a href="{% url 'invoice_pdf' invoice.pk %}" 
-                                                   class="btn btn-sm btn-outline-info" title="Download Invoice">
-                                                    <i class="fas fa-file-pdf"></i> Download Invoice
-                                                </a>
-                                                
-                                                <!-- Status change buttons -->
-                                                {% if invoice.status == 'draft' %}
-                                                    <a href="{% url 'invoice_mark_sent' invoice.pk %}" 
-                                                       class="btn btn-sm btn-primary" title="Mark as Sent"
-                                                       onclick="return confirm('Mark invoice {{ invoice.invoice_number }} as sent?')">
-                                                        <i class="fas fa-share"></i> Mark as Sent
-                                                    </a>
-                                                {% elif invoice.status == 'sent' %}
-                                                    <a href="{% url 'invoice_mark_paid' invoice.pk %}" 
-                                                       class="btn btn-sm btn-success" title="Mark as Paid"
-                                                       onclick="return confirm('Mark invoice {{ invoice.invoice_number }} as paid?')">
-                                                        <i class="fas fa-dollar-sign"></i> Mark as Paid
-                                                    </a>
-                                                {% elif invoice.status == 'paid' %}
-                                                    <span class="completed-status">
-                                                        <i class="fas fa-check-circle"></i> Completed
-                                                    </span>
-                                                {% endif %}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <div class="text-center py-4">
-                            <i class="fas fa-file-invoice fa-2x text-muted mb-3"></i>
-                            <h5 class="text-muted">No invoices yet</h5>
-                            <p class="text-muted">Create the first invoice for this client.</p>
-                            <a href="{% url 'invoice_create_for_client' client.pk %}" class="btn btn-primary">
-                                <i class="fas fa-plus"></i> Create First Invoice
-                            </a>
-                        </div>
-                    {% endif %}
+                {% if invoices %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Period</th>
+                            <th>Status</th>
+                            <th>Amount</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in invoices %}
+                        <tr>
+                            <td><a href="{% url 'invoice_detail' invoice.pk %}" style="color:var(--color-accent);text-decoration:none;font-weight:500;">{{ invoice.invoice_number }}</a></td>
+                            <td style="color:var(--color-muted);">{{ invoice.period_start|date:"M d" }} – {{ invoice.period_end|date:"M d, Y" }}</td>
+                            <td>
+                                <form method="post" action="{% url 'invoice_change_status' invoice.pk %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.path }}">
+                                    <select name="status" onchange="this.form.submit()" class="status-select">
+                                        <option value="draft"   {% if invoice.status == 'draft'   %}selected{% endif %}>Draft</option>
+                                        <option value="sent"    {% if invoice.status == 'sent'    %}selected{% endif %}>Sent</option>
+                                        <option value="overdue" {% if invoice.status == 'overdue' %}selected{% endif %}>Overdue</option>
+                                        <option value="paid"    {% if invoice.status == 'paid'    %}selected{% endif %}>Paid</option>
+                                    </select>
+                                </form>
+                            </td>
+                            <td style="font-weight:500;">${{ invoice.total_amount|floatformat:2 }}</td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <a href="{% url 'invoice_edit' invoice.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                    <a href="{% url 'invoice_pdf' invoice.pk %}" class="btn btn-sm btn-outline-secondary">PDF</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="card-body text-center py-5">
+                    <p class="text-muted mb-3">No invoices yet.</p>
+                    <a href="{% url 'invoice_create_for_client' client.pk %}" class="btn btn-primary">Create First Invoice</a>
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>

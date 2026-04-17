@@ -1,92 +1,112 @@
 {% extends "base.html" %}
 {% block title %}Invoice {{ invoice.invoice_number }}{% endblock %}
 {% block content %}
-<h1>Invoice {{ invoice.invoice_number }}</h1>
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+<div class="page-header">
   <div>
-    <p><strong>Employee:</strong> {{ invoice.client.name|default:"—" }}</p>
-    <p class="muted">{{ invoice.client_email }}</p> 
-    <p><strong>Period:</strong> {{ invoice.period_start }} → {{ invoice.period_end }} ({{ invoice.get_period_type_display }})</p>
-    <p><strong>Issued:</strong> {{ invoice.date_issued }}</p>
-    <p><strong>Hourly rate:</strong> ${{ invoice.hourly_rate }}</p>
+    {% if invoice.client %}
+      <a href="{% url 'client_detail' invoice.client.pk %}" class="btn btn-outline-secondary btn-sm mb-2">
+        <i class="fas fa-arrow-left"></i> Back to {{ invoice.client.name }}
+      </a>
+    {% endif %}
+    <h1>Invoice {{ invoice.invoice_number }}</h1>
+    <p class="text-muted mb-0" style="font-size:14px;">{{ invoice.period_start|date:"M d" }} – {{ invoice.period_end|date:"M d, Y" }} · {{ invoice.get_period_type_display }}</p>
   </div>
-  <div>
-    <p><strong>Status:</strong> 
-      {% if invoice.status == 'draft' %}
-        <span class="badge bg-warning">Draft</span>
-      {% elif invoice.status == 'sent' %}
-        <span class="badge bg-primary">Sent</span>
-      {% elif invoice.status == 'paid' %}
-        <span class="badge bg-success">Paid</span>
-      {% elif invoice.status == 'overdue' %}
-        <span class="badge bg-danger">Overdue</span>
-      {% endif %}
-    </p>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="{% url 'invoice_pdf' invoice.pk %}"><i class="fas fa-arrow-down"></i> Download PDF</a>
+    <a class="btn btn-outline-secondary" href="{% url 'invoice_edit' invoice.pk %}"><i class="fas fa-pencil-alt"></i> Edit</a>
+    <a class="btn btn-outline-secondary" href="{% url 'invoice_duplicate' invoice.pk %}"><i class="fas fa-copy"></i> Duplicate</a>
   </div>
 </div>
 
-<table>
-  <thead>
-    <tr>
-      <th>Date</th>
-      <th>Weekday</th>
-      <th>Description</th>
-      <th>Hours</th>
-      <th>Amount</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for e in invoice.work_entries.all %}
-      <tr>
-        <td>{{ e.work_date|date:"Y-m-d" }}</td>
-        <td>{{ e.work_date|date:"l" }}</td>  {# "l" = Monday, Tuesday, ... #}
-        <td>{{ e.description }}</td>
-        <td>{{ e.hours }}</td>
-        <td class="right">${{ e.amount|floatformat:2 }}</td>
-      </tr>
-    {% empty %}
-      <tr><td colspan="5" class="muted">No work entries</td></tr>
-    {% endfor %}
-  </tbody>
-<tfoot>
-  <tr>
-    <!-- Ocupa Date + Weekday -->
-    <td colspan="3" class="right"><strong>Totals</strong></td>
-    <!-- Bajo Hours -->
-    <td class="right"><strong>{{ invoice.total_hours }}</strong></td>
-    <!-- Bajo Amount -->
-    <td class="right"><strong>${{ invoice.total_amount|floatformat:2 }}</strong></td>
-    <!-- Bajo Description (vacío) -->
-    <td></td>
-  </tr>
-</tfoot>
-</table>
-{% if invoice.notes %}
-<p><strong>Notes:</strong></p>
-<p>{{ invoice.notes|linebreaksbr }}</p>
-{% endif %}
+<div class="row g-4">
 
-<div style="margin-top: 20px;">
-  <h3>Actions</h3>
-  <div class="d-flex gap-2 flex-wrap">
-    <a class="btn btn-info" href="{% url 'invoice_pdf' invoice.pk %}">
-      <i class="fas fa-file-pdf"></i> Download PDF
-    </a>
-    
-    {% if invoice.status == 'draft' %}
-      <a class="btn btn-primary" href="{% url 'invoice_mark_sent' invoice.pk %}">
-        <i class="fas fa-share"></i> Mark as Sent
-      </a>
-    {% elif invoice.status == 'sent' %}
-      <a class="btn btn-success" href="{% url 'invoice_mark_paid' invoice.pk %}">
-        <i class="fas fa-dollar-sign"></i> Mark as Paid
-      </a>
+  <!-- Left: work entries -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">Work Entries</div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Day</th>
+            <th>Description</th>
+            <th class="text-end">Hours</th>
+            <th class="text-end">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in invoice.work_entries.all %}
+          <tr>
+            <td>{{ e.work_date|date:"M d, Y" }}</td>
+            <td style="color:var(--color-muted);">{{ e.work_date|date:"l" }}</td>
+            <td>{{ e.description|default:"—" }}</td>
+            <td class="text-end">{{ e.hours }}</td>
+            <td class="text-end">${{ e.amount|floatformat:2 }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-muted text-center py-4">No work entries.</td></tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3"></td>
+            <td class="text-end" style="font-weight:600;border-top:2px solid var(--color-border);">{{ invoice.total_hours }}h</td>
+            <td class="text-end" style="font-weight:600;border-top:2px solid var(--color-border);">${{ invoice.total_amount|floatformat:2 }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    {% if invoice.notes %}
+    <div class="card mt-4">
+      <div class="card-header">Notes</div>
+      <div class="card-body" style="font-size:14px;line-height:1.6;">{{ invoice.notes|linebreaksbr }}</div>
+    </div>
     {% endif %}
-    
-    <a class="btn btn-secondary" href="{% url 'invoice_duplicate' invoice.pk %}">
-      <i class="fas fa-copy"></i> Duplicate Invoice
-    </a>
   </div>
+
+  <!-- Right: details -->
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="mb-3">
+          <div class="text-muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Status</div>
+          <form method="post" action="{% url 'invoice_change_status' invoice.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <select name="status" onchange="this.form.submit()" class="status-select">
+              <option value="draft"   {% if invoice.status == 'draft'   %}selected{% endif %}>Draft</option>
+              <option value="sent"    {% if invoice.status == 'sent'    %}selected{% endif %}>Sent</option>
+              <option value="overdue" {% if invoice.status == 'overdue' %}selected{% endif %}>Overdue</option>
+              <option value="paid"    {% if invoice.status == 'paid'    %}selected{% endif %}>Paid</option>
+            </select>
+          </form>
+        </div>
+        <div class="mb-3">
+          <div class="text-muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Client</div>
+          <div style="font-weight:500;">{{ invoice.client.name|default:invoice.client_name }}</div>
+          {% if invoice.client_email %}<div class="text-muted" style="font-size:13px;">{{ invoice.client_email }}</div>{% endif %}
+        </div>
+        <div class="mb-3">
+          <div class="text-muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Hourly Rate</div>
+          <div style="font-weight:500;">${{ invoice.hourly_rate }}/hr</div>
+        </div>
+        <div>
+          <div class="text-muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Issued</div>
+          <div style="font-weight:500;">{{ invoice.date_issued|date:"M d, Y" }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-body text-center">
+        <div class="text-muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Total Amount</div>
+        <div style="font-size:32px;font-weight:700;letter-spacing:-1px;">${{ invoice.total_amount|floatformat:2 }}</div>
+        <div class="text-muted" style="font-size:13px;">{{ invoice.total_hours }} hours × ${{ invoice.hourly_rate }}</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}

@@ -1,36 +1,64 @@
 {% extends "base.html" %}
-{% block title %}Invoice List{% endblock %}
+{% block title %}Invoices{% endblock %}
 {% block content %}
-<h1>Invoices</h1>
-<table>
-  <thead>
-    <tr>
-      <th>#</th><th>Employee</th><th>Period</th><th>Status</th><th>Hours</th><th>Total</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for inv in invoices %}
-      <tr>
-        <td><a href="{% url 'invoice_detail' inv.pk %}">{{ inv.invoice_number }}</a></td>
-        <td>{{ inv.employee|default:"—" }}</td>
-        <td>{{ inv.period_start }} → {{ inv.period_end }} ({{ inv.get_period_type_display }})</td>
-        <td>
-          {% if inv.status == 'draft' %}
-            <span class="badge bg-warning">Draft</span>
-          {% elif inv.status == 'sent' %}
-            <span class="badge bg-primary">Sent</span>
-          {% elif inv.status == 'paid' %}
-            <span class="badge bg-success">Paid</span>
-          {% elif inv.status == 'overdue' %}
-            <span class="badge bg-danger">Overdue</span>
-          {% endif %}
-        </td>
-        <td>{{ inv.total_hours }}</td>
-        <td>${{ inv.total_amount }}</td>
-      </tr>
-    {% empty %}
-      <tr><td colspan="6">No invoices yet.</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
+
+<div class="page-header">
+  <h1>Invoices</h1>
+</div>
+
+<div class="card">
+  {% if invoices %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Invoice #</th>
+          <th>Client</th>
+          <th>Period</th>
+          <th>Status</th>
+          <th>Hours</th>
+          <th>Amount</th>
+          <th>Issued</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inv in invoices %}
+        <tr>
+          <td><a href="{% url 'invoice_detail' inv.pk %}" style="color:var(--color-accent);text-decoration:none;font-weight:500;">{{ inv.invoice_number }}</a></td>
+          <td>{{ inv.client_name|default:"—" }}</td>
+          <td style="color:var(--color-muted);">{{ inv.period_start|date:"M d" }} – {{ inv.period_end|date:"M d, Y" }}</td>
+          <td>
+            <form method="post" action="{% url 'invoice_change_status' inv.pk %}" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.path }}">
+              <select name="status" onchange="this.form.submit()" class="status-select">
+                <option value="draft"   {% if inv.status == 'draft'   %}selected{% endif %}>Draft</option>
+                <option value="sent"    {% if inv.status == 'sent'    %}selected{% endif %}>Sent</option>
+                <option value="overdue" {% if inv.status == 'overdue' %}selected{% endif %}>Overdue</option>
+                <option value="paid"    {% if inv.status == 'paid'    %}selected{% endif %}>Paid</option>
+              </select>
+            </form>
+          </td>
+          <td>{{ inv.total_hours }}h</td>
+          <td style="font-weight:500;">${{ inv.total_amount|floatformat:2 }}</td>
+          <td style="color:var(--color-muted);">{{ inv.date_issued|date:"M d, Y" }}</td>
+          <td>
+            <div class="d-flex gap-2">
+              <a href="{% url 'invoice_detail' inv.pk %}" class="btn btn-sm btn-outline-secondary">View</a>
+              <a href="{% url 'invoice_edit' inv.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="card-body text-center py-5">
+      <i class="fas fa-file-invoice fa-2x text-muted mb-3 d-block"></i>
+      <p class="text-muted mb-3">No invoices yet. Create one from a client's page.</p>
+      <a href="{% url 'client_list' %}" class="btn btn-primary">Go to Clients</a>
+    </div>
+  {% endif %}
+</div>
+
 {% endblock %}

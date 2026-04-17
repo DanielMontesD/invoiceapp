@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+
+      <h2 class="mb-4">My Profile</h2>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+
+        <div class="card mb-4">
+          <div class="card-header"><h5 class="mb-0">Account Details</h5></div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">First Name</label>
+                <input type="text" name="first_name" class="form-control" value="{{ request.user.first_name }}">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Last Name</label>
+                <input type="text" name="last_name" class="form-control" value="{{ request.user.last_name }}">
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Email</label>
+              <input type="email" name="email" class="form-control" value="{{ request.user.email }}">
+            </div>
+            <div class="mb-0">
+              <label class="form-label">Username</label>
+              <input type="text" class="form-control" value="{{ request.user.username }}" disabled>
+              <div class="form-text">Username cannot be changed.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-4">
+          <div class="card-header"><h5 class="mb-0">Business Details</h5>
+            <div class="form-text">These appear on your invoices.</div>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label">Business / Trading Name</label>
+              {{ profile_form.business_name }}
+              <div class="form-text">Shown as "From" on PDFs. Leave blank to use your account name.</div>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Phone</label>
+                {{ profile_form.phone }}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Default Hourly Rate ($)</label>
+                {{ profile_form.default_hourly_rate }}
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Address</label>
+              {{ profile_form.address }}
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

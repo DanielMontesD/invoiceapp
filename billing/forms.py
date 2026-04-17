@@ -1,6 +1,28 @@
 from django import forms
 from django.forms import inlineformset_factory
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
 from .models import Invoice, WorkEntry, Client, UserProfile
+
+
+class RegisterForm(UserCreationForm):
+    email = forms.EmailField(required=True)
+
+    class Meta:
+        model = User
+        fields = ["username", "email", "password1", "password2"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.update({"class": "form-control"})
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data["email"]
+        if commit:
+            user.save()
+        return user
 
 
 class InvoiceForm(forms.ModelForm):
@@ -26,12 +48,14 @@ class InvoiceForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # For new invoices, only allow Draft status
         if not self.instance.pk:
-            self.fields['status'].choices = [('draft', 'Draft')]
+            self.fields['status'].required = False
             self.fields['status'].initial = 'draft'
-        
-        # Add CSS classes for better styling
+
         for field in self.fields.values():
             field.widget.attrs.update({"class": "form-control"})
+
+    def clean_status(self):
+        return self.cleaned_data.get('status') or 'draft'
 
 
 class WorkEntryForm(forms.ModelForm):
@@ -60,26 +84,20 @@ WorkEntryFormSet = inlineformset_factory(
 
 
 class ClientForm(forms.ModelForm):
-    """
-    Form for creating and editing clients.
-    """
     class Meta:
         model = Client
-        fields = [
-            "name",
-            "email", 
-            "default_hourly_rate",
-            "is_active",
-        ]
+        fields = ["name", "email", "default_hourly_rate", "is_active"]
         widgets = {
             "default_hourly_rate": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
         }
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Add CSS classes for better styling
-        for field in self.fields.values():
-            field.widget.attrs.update({"class": "form-control"})
+        for name, field in self.fields.items():
+            if name == 'is_active':
+                field.widget.attrs.update({"class": "form-check-input", "role": "switch"})
+            else:
+                field.widget.attrs.update({"class": "form-control"})
 
 
 class UserProfileForm(forms.ModelForm):

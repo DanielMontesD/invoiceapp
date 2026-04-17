@@ -120,7 +120,7 @@ class Invoice(models.Model):
 
     class Meta:
         ordering = ["-id"]
-        unique_together = [['user', 'invoice_number']]
+        unique_together = [['client', 'invoice_number']]
 
     def __str__(self):
         return f"Invoice {self.invoice_number or '(draft)'} - {self.client_name}"
@@ -130,21 +130,14 @@ class Invoice(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.invoice_number:
-            # Generate invoice number per user
-            if self.user:
-                # Get the last invoice for this specific user
-                last = Invoice.objects.filter(user=self.user).order_by("-id").first()
-                next_num = 1
-                if last and (last.invoice_number or "").isdigit():
-                    next_num = int(last.invoice_number) + 1
-                self.invoice_number = f"{next_num:05d}"
+            if self.client_id:
+                last = Invoice.objects.filter(client_id=self.client_id).order_by("-id").first()
             else:
-                # Fallback for invoices without user (shouldn't happen with our current setup)
-                last = Invoice.objects.order_by("-id").first()
-                next_num = 1
-                if last and (last.invoice_number or "").isdigit():
-                    next_num = int(last.invoice_number) + 1
-                self.invoice_number = f"{next_num:05d}"
+                last = Invoice.objects.filter(user=self.user).order_by("-id").first()
+            next_num = 1
+            if last and (last.invoice_number or "").isdigit():
+                next_num = int(last.invoice_number) + 1
+            self.invoice_number = f"{next_num:05d}"
         super().save(*args, **kwargs)
 
     @property

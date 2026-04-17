@@ -1,218 +1,214 @@
 {% extends "base.html" %}
-{% block title %}New Invoice{% endblock %}
+{% block title %}{% if invoice %}Edit Invoice {{ invoice.invoice_number }}{% else %}New Invoice{% endif %}{% endblock %}
 {% block content %}
-<style>
-  /* Styling for weekday column - left aligned for consistency */
-  .weekday-cell {
-    text-align: left !important;
-    font-weight: bold;
-    color: #666;
-    min-width: 100px;
-  }
-</style>
-<h1>New Invoice</h1>
+
+<div class="page-header">
+  <h1>{% if invoice %}Edit Invoice {{ invoice.invoice_number }}{% else %}New Invoice{% endif %}</h1>
+  <a href="{% if invoice %}{% url 'invoice_detail' invoice.pk %}{% elif fixed_employee %}{% url 'client_detail' fixed_employee.pk %}{% else %}{% url 'client_list' %}{% endif %}" class="btn btn-outline-secondary">Cancel</a>
+</div>
 
 <form method="post" novalidate>
   {% csrf_token %}
 
   {% if form.non_field_errors %}
-    <div class="errors">
-      {{ form.non_field_errors }}
-    </div>
+    <div class="alert alert-danger mb-4">{{ form.non_field_errors }}</div>
   {% endif %}
 
-  <fieldset>
-    <legend>Invoice data</legend>
+  <div class="row g-4">
 
-    {% if fixed_employee %}
-      <p class="muted">
-        <strong>Client:</strong> {{ fixed_employee.name }} ({{ fixed_employee.email|default:"No email" }})
-      </p>
-    {% endif %}
+    <!-- Left: invoice details -->
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">Invoice Details</div>
+        <div class="card-body">
 
-    <p>{{ form.period_type.label_tag }} {{ form.period_type }}</p>
-    <p>{{ form.period_start.label_tag }} {{ form.period_start }}</p>
-    <p>{{ form.period_end.label_tag }} {{ form.period_end }}</p>
-    <p>{{ form.hourly_rate.label_tag }} {{ form.hourly_rate }}</p>
-    <p>{{ form.status.label_tag }} {{ form.status }}</p>
-    <p>{{ form.notes.label_tag }} {{ form.notes }}</p>
-  </fieldset>
+          {% if fixed_employee %}
+            <div class="mb-4 p-3" style="background:var(--color-bg);border-radius:8px;">
+              <div class="text-muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Client</div>
+              <div style="font-weight:600;">{{ fixed_employee.name }}</div>
+              {% if fixed_employee.email %}<div class="text-muted" style="font-size:13px;">{{ fixed_employee.email }}</div>{% endif %}
+            </div>
+          {% endif %}
 
-  <fieldset>
-    <legend>Work entries</legend>
+          <div class="mb-3">
+            <label class="form-label">Billing Period</label>
+            {{ form.period_type }}
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label">Start</label>
+              {{ form.period_start }}
+            </div>
+            <div class="col-6">
+              <label class="form-label">End</label>
+              {{ form.period_end }}
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Hourly Rate ($)</label>
+            {{ form.hourly_rate }}
+          </div>
+          {% if invoice %}
+          <div class="mb-3">
+            <label class="form-label">Status</label>
+            {{ form.status }}
+          </div>
+          {% endif %}
+          <div class="mb-1">
+            <label class="form-label">Notes</label>
+            {{ form.notes }}
+          </div>
+        </div>
+      </div>
+    </div>
 
-    {% if formset.non_form_errors %}
-      <div class="errors">{{ formset.non_form_errors }}</div>
-    {% endif %}
+    <!-- Right: work entries -->
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header">Work Entries</div>
 
-    {{ formset.management_form }}
+        {{ formset.management_form }}
 
-    <table>
-      <thead>
-        <tr><th>Date</th><th>Day</th><th>Hours</th><th>Description</th></tr>
-      </thead>
-      <tbody id="entries">
-        {# Si venimos de un POST con errores, renderiza las filas que ya existen #}
-        {% if formset.total_form_count %}
-          {% for f in formset.forms %}
-            <tr class="form-row">
-              <td>
-                {{ f.work_date }}
-                {% if f.work_date.errors %}<div class="field-errors">{{ f.work_date.errors|join:", " }}</div>{% endif %}
-              </td>
-              <td class="weekday-cell">{% if f.work_date.value %}{{ f.work_date.value|date:"l" }}{% endif %}</td>
-              <td>
-                {{ f.hours }}
-                {% if f.hours.errors %}<div class="field-errors">{{ f.hours.errors|join:", " }}</div>{% endif %}
-              </td>
-              <td>
-                {{ f.description }}
-                {% if f.description.errors %}<div class="field-errors">{{ f.description.errors|join:", " }}</div>{% endif %}
-              </td>
+        <table class="table" id="entries-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Day</th>
+              <th>Hours</th>
+              <th>Description</th>
             </tr>
-          {% endfor %}
-        {% endif %}
-      </tbody>
-    </table>
+          </thead>
+          <tbody id="entries">
+            {% if formset.total_form_count %}
+              {% for f in formset.forms %}
+                <tr class="form-row">
+                  <td>{{ f.work_date }}</td>
+                  <td class="text-muted" style="font-size:13px;min-width:90px;">{% if f.work_date.value %}{{ f.work_date.value|date:"l" }}{% endif %}</td>
+                  <td>{{ f.hours }}</td>
+                  <td>{{ f.description }}</td>
+                </tr>
+              {% endfor %}
+            {% endif %}
+          </tbody>
+        </table>
 
-    {# Prototipo para generar filas en el cliente cuando TOTAL_FORMS = 0 en GET #}
-    <template id="empty-row">
-      <tr class="form-row">
-        <td>{{ formset.empty_form.work_date }}</td>
-        <td class="weekday-cell"></td>
-        <td>{{ formset.empty_form.hours }}</td>
-        <td>{{ formset.empty_form.description }}</td>
-      </tr>
-    </template>
-  </fieldset>
+        <template id="empty-row">
+          <tr class="form-row">
+            <td>{{ formset.empty_form.work_date }}</td>
+            <td class="text-muted" style="font-size:13px;min-width:90px;"></td>
+            <td>{{ formset.empty_form.hours }}</td>
+            <td>{{ formset.empty_form.description }}</td>
+          </tr>
+        </template>
 
-  <button type="submit" class="btn btn-primary btn-lg">
-    <i class="fas fa-save"></i> Save Invoice
-  </button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="d-flex gap-2 mt-4">
+    <button type="submit" class="btn btn-primary">
+      {% if invoice %}Update Invoice{% else %}Save Invoice{% endif %}
+    </button>
+    <a href="{% if invoice %}{% url 'invoice_detail' invoice.pk %}{% elif fixed_employee %}{% url 'client_detail' fixed_employee.pk %}{% else %}{% url 'client_list' %}{% endif %}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
 </form>
 
 <script>
 (function(){
-  const prefix = "{{ formset.prefix }}";  // p.ej. workentry_set
+  const prefix = "{{ formset.prefix }}";
+  const existingEntries = {{ entries_json|default:"{}"|safe }};
   const tbody  = document.getElementById("entries");
   const tmpl   = document.getElementById("empty-row");
   const total  = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
-
   const sel    = document.getElementById("id_period_type");
   const startI = document.getElementById("id_period_start");
   const endI   = document.getElementById("id_period_end");
 
-  // ---------- Helpers de fecha (evitar corrimiento; usar mediodía local) ----------
   function noon(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0); }
   function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return noon(x); }
   function mondayOf(d){
-    const day = d.getDay(); // 0=Dom..6=Sáb
+    const day = d.getDay();
     const off = (day === 0 ? -6 : 1 - day);
     return addDays(noon(d), off);
   }
   function endOfMonth(d){ return noon(new Date(d.getFullYear(), d.getMonth()+1, 0)); }
 
-  // Lee un <input type="date"> como Date (soporta "YYYY-MM-DD" y "DD/MM/YYYY")
   function getInputDate(input){
     if (!input) return null;
     if (input.valueAsDate) return noon(input.valueAsDate);
     const v = input.value;
     if (!v) return null;
     let y, m, d;
-    if (v.includes("-")) {            // "YYYY-MM-DD"
-      [y, m, d] = v.split("-").map(Number);
-    } else if (v.includes("/")) {     // "DD/MM/YYYY" (algunos locales Windows)
-      [d, m, y] = v.split("/").map(Number);
-    } else {
-      return null;
-    }
+    if (v.includes("-")) { [y, m, d] = v.split("-").map(Number); }
+    else if (v.includes("/")) { [d, m, y] = v.split("/").map(Number); }
+    else { return null; }
     return noon(new Date(y, (m||1)-1, d||1));
   }
 
-  // Escribe en el input una fecha; fija mediodía local para evitar que muestre el día anterior
   function setInputDate(input, date){
     if (!input || !date) return;
-    const localNoon = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0, 0);
-    if ("valueAsDate" in input) {
-      input.valueAsDate = localNoon;
-    } else {
-      const pad = n => String(n).padStart(2, "0");
-      input.value = `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
-    }
+    const pad = n => String(n).padStart(2, "0");
+    input.value = `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
   }
 
-  function daysBetween(a,b){
+  function daysBetween(a, b){
     const out = [];
     if (!a || !b) return out;
     let cur = noon(a), stop = noon(b);
-    while (cur <= stop){
-      out.push(noon(cur));
-      cur = addDays(cur, 1);
-    }
+    while (cur <= stop){ out.push(noon(cur)); cur = addDays(cur, 1); }
     return out;
   }
 
   function buildRows(dates){
     tbody.innerHTML = "";
+    const pad = n => String(n).padStart(2, "0");
     dates.forEach((d, i) => {
       const row = tmpl.content.firstElementChild.cloneNode(true);
       row.querySelectorAll("input,select,textarea,label").forEach(el=>{
         ["name","id","for"].forEach(attr=>{
-          if (el.hasAttribute(attr)){
-            el.setAttribute(attr, el.getAttribute(attr).replace("__prefix__", i));
-          }
+          if (el.hasAttribute(attr)) el.setAttribute(attr, el.getAttribute(attr).replace("__prefix__", i));
         });
       });
-      // Pre-fill dates automatically
       const dateInput = row.querySelector(`#id_${prefix}-${i}-work_date`);
       if (dateInput) setInputDate(dateInput, d);
-      
-      // Update weekday display
-      const weekdayCell = row.querySelector('td:nth-child(2)'); // Second column (Day)
-      if (weekdayCell) {
-        weekdayCell.className = 'weekday-cell';
-        weekdayCell.style.textAlign = 'center';
-        if (d) {
-          weekdayCell.textContent = d.toLocaleDateString('en-US', { weekday: 'long' });
-        }
+
+      const dateKey = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      const existing = existingEntries[dateKey];
+      if (existing) {
+        const hoursInput = row.querySelector(`#id_${prefix}-${i}-hours`);
+        const descInput  = row.querySelector(`#id_${prefix}-${i}-description`);
+        if (hoursInput && existing.hours) hoursInput.value = existing.hours;
+        if (descInput  && existing.description) descInput.value = existing.description;
       }
-      
+
+      const dayCell = row.querySelectorAll("td")[1];
+      if (dayCell) dayCell.textContent = d.toLocaleDateString('en-US', { weekday: 'long' });
+
       tbody.appendChild(row);
     });
     if (total) total.value = dates.length;
   }
-  
+
   function updateByType(){
     const now = new Date();
-    const existingStart = getInputDate(startI);   // Date o null
+    const existingStart = getInputDate(startI);
     let s, e;
-
     if (sel.value === "weekly") {
-      // Weekly: alinear al lunes (si ya hay start, al lunes de esa misma semana)
       s = existingStart ? mondayOf(existingStart) : mondayOf(now);
       e = addDays(s, 6);
-    }
-    else if (sel.value === "fortnightly") {
-      // Fortnightly: respetar EXACTAMENTE el start actual si existe
+    } else if (sel.value === "fortnightly") {
       s = existingStart ? existingStart : mondayOf(now);
-      console.log(s);
-      e = addDays(s, 13);   // 14 días (si prefieres terminar un día antes, usa 12)
-      console.log(e)
-    }
-    else if (sel.value === "monthly") {
-      // Monthly: respetar EXACTAMENTE el start actual si existe
-      // y cerrar al último día del MES de s
-      s = existingStart ? existingStart
-                        : noon(new Date(now.getFullYear(), now.getMonth(), 1));
-      e = endOfMonth(s);    // fin del mes de 's'
-    }
-    else { // custom
+      e = addDays(s, 13);
+    } else if (sel.value === "monthly") {
+      s = existingStart ? existingStart : noon(new Date(now.getFullYear(), now.getMonth(), 1));
+      e = endOfMonth(s);
+    } else {
       const s0 = getInputDate(startI), e0 = getInputDate(endI);
       if (!s0 || !e0) { buildRows([]); return; }
       s = s0; e = e0;
     }
-
-    setInputDate(startI, s);   // fija al mediodía local (evita “ir un día atrás” en Windows)
+    setInputDate(startI, s);
     setInputDate(endI, e);
     buildRows(daysBetween(s, e));
   }
@@ -223,49 +219,22 @@
     buildRows(daysBetween(s, e));
   }
 
-  sel && sel.addEventListener("change", updateByType);
+  sel    && sel.addEventListener("change", updateByType);
   startI && startI.addEventListener("change", updateByDates);
-  endI && endI.addEventListener("change", updateByDates);
+  endI   && endI.addEventListener("change", updateByDates);
 
-  // Add event listener for individual date changes to update weekday
-  tbody && tbody.addEventListener("change", function(e) {
-    if (e.target.type === "date") {
-      const row = e.target.closest("tr");
-      const weekdayCell = row.querySelector('td:nth-child(2)'); // Second column (Day)
-      
-      if (weekdayCell) {
-        weekdayCell.className = 'weekday-cell';
-        weekdayCell.style.textAlign = 'left';
-        
-        if (e.target.value) {
-          const date = new Date(e.target.value);
-          weekdayCell.textContent = date.toLocaleDateString('en-US', { weekday: 'long' });
-        } else {
-          weekdayCell.textContent = '';
-        }
+  tbody && tbody.addEventListener("change", function(ev) {
+    if (ev.target.type === "date") {
+      const row = ev.target.closest("tr");
+      const dayCell = row.querySelectorAll("td")[1];
+      if (dayCell && ev.target.value) {
+        const date = new Date(ev.target.value + "T12:00:00");
+        dayCell.textContent = date.toLocaleDateString('en-US', { weekday: 'long' });
       }
     }
   });
 
-  // Construcción inicial
   updateByType();
-  
-  // Force left alignment for all weekday cells
-  function forceLeftAlignment() {
-    const weekdayCells = document.querySelectorAll('td.weekday-cell, td:nth-child(2)');
-    weekdayCells.forEach(cell => {
-      cell.style.textAlign = 'left';
-      cell.style.setProperty('text-align', 'left', 'important');
-      cell.style.verticalAlign = 'middle';
-      cell.style.setProperty('vertical-align', 'middle', 'important');
-    });
-  }
-  
-  // Run immediately and after DOM changes
-  forceLeftAlignment();
-  setTimeout(forceLeftAlignment, 100);
-  setTimeout(forceLeftAlignment, 500);
 })();
-
 </script>
 {% endblock %}

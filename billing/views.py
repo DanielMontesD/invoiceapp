@@ -1,29 +1,71 @@
 from datetime import date, timedelta
-from calendar import monthrange
 
 from django.contrib import messages
 from django.db.models import Q
-from django.forms import inlineformset_factory
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
 from django.template.loader import render_to_string
 
-from .forms import InvoiceForm, WorkEntryFormSet, ClientForm, UserProfileForm
+from .forms import InvoiceForm, WorkEntryFormSet, ClientForm, UserProfileForm, RegisterForm
 from .models import Invoice, Client, WorkEntry, UserProfile
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.forms import UserCreationForm
+
 
 from io import BytesIO
 from xhtml2pdf import pisa
 
-# Simple health check view for Railway
+# Simple health check view
 def health_check(request):
-    """Simple health check endpoint for Railway deployment"""
-    # Return a simple HTTP 200 response without any dependencies
     return HttpResponse("OK", content_type="text/plain")
+
+
+def root_redirect(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    return redirect('login')
+
+
+@login_required
+def dashboard(request):
+    all_clients = Client.objects.filter(user=request.user, is_active=True)
+    selected_ids = [int(i) for i in request.GET.getlist('clients') if i.isdigit()]
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+
+    invoices = Invoice.objects.filter(user=request.user)
+    if selected_ids:
+        invoices = invoices.filter(client_id__in=selected_ids)
+    if date_from:
+        invoices = invoices.filter(period_start__gte=date_from)
+    if date_to:
+        invoices = invoices.filter(period_end__lte=date_to)
+
+    total_invoices = invoices.count()
+    draft_count = invoices.filter(status='draft').count()
+    sent_count = invoices.filter(status='sent').count()
+    paid_count = invoices.filter(status='paid').count()
+
+    total_earned = sum(inv.total_amount for inv in invoices.filter(status='paid'))
+    pending_amount = sum(inv.total_amount for inv in invoices.filter(status='sent'))
+
+    recent_invoices = invoices.select_related('client')[:5]
+
+    return render(request, 'billing/dashboard.html', {
+        'total_invoices': total_invoices,
+        'draft_count': draft_count,
+        'sent_count': sent_count,
+        'paid_count': paid_count,
+        'total_earned': total_earned,
+        'pending_amount': pending_amount,
+        'active_clients': all_clients.count(),
+        'recent_invoices': recent_invoices,
+        'all_clients': all_clients,
+        'selected_ids': selected_ids,
+        'date_from': date_from,
+        'date_to': date_to,
+    })
 
 
 # --- Client management views ---
@@ -53,8 +95,12 @@ def client_list(request):
         clients = clients.filter(is_active=False)
     # If 'all' is selected, show both active and inactive
     
+    clients_list = list(clients)
+    for client in clients_list:
+        client.recent_invoices = list(client.invoices.order_by('-id')[:5])
+
     return render(request, "billing/client_list.html", {
-        "clients": clients,
+        "clients": clients_list,
         "search_query": search_query,
         "status_filter": status_filter,
     })
@@ -69,8 +115,7 @@ def client_detail(request, pk):
     client = get_object_or_404(Client, pk=pk, user=request.user)
     invoices = client.invoices.all().order_by("-id")
     
-    # Calculate total revenue from all invoices
-    total_revenue = sum(invoice.total_amount for invoice in invoices)
+    total_revenue = sum(invoice.total_amount for invoice in invoices.filter(status='paid'))
     
     return render(request, "billing/client_detail.html", {
         "client": client,
@@ -185,27 +230,15 @@ def invoice_create_for_employee(request, pk):
     if request.method == "POST":
         form = InvoiceForm(request.POST)
         
-        # Debug: print form data
-        print(f"Form data: {request.POST}")
-        print(f"Form is valid: {form.is_valid()}")
-        if not form.is_valid():
-            print(f"Form errors: {form.errors}")
-        
         if form.is_valid():
-            # Create invoice with client data
             invoice = form.save(commit=False)
             invoice.client = client
             invoice.client_name = client.name
             invoice.client_email = client.email
             if not invoice.hourly_rate:
                 invoice.hourly_rate = client.default_hourly_rate
-            
-            # Assign to the current user
             invoice.user = request.user
-            
-            # Save invoice first
             invoice.save()
-            print(f"Invoice saved with ID: {invoice.pk}")
             
             # Handle work entries
             formset = WorkEntryFormSet(request.POST, instance=invoice)
@@ -380,7 +413,8 @@ def invoice_create(request):
 @login_required
 def invoice_pdf(request, pk):
     invoice = get_object_or_404(Invoice, pk=pk, user=request.user)
-    html = render_to_string("billing/invoice_pdf.html", {"invoice": invoice})
+    profile = UserProfile.objects.filter(user=request.user).first()
+    html = render_to_string("billing/invoice_pdf.html", {"invoice": invoice, "profile": profile})
 
     result = BytesIO()
     pdf = pisa.CreatePDF(html, dest=result, encoding="UTF-8")
@@ -408,12 +442,24 @@ def invoice_mark_sent(request, pk):
 @login_required
 def invoice_mark_paid(request, pk):
     invoice = get_object_or_404(Invoice, pk=pk, user=request.user)
-    if invoice.status == 'sent':
+    if invoice.status in ('sent', 'overdue'):
         invoice.status = 'paid'
         invoice.save()
         messages.success(request, f"Invoice {invoice.invoice_number} marked as paid.")
     # Redirect back to client detail page
     return redirect('client_detail', pk=invoice.client.pk)
+
+
+@login_required
+def invoice_change_status(request, pk):
+    if request.method == 'POST':
+        invoice = get_object_or_404(Invoice, pk=pk, user=request.user)
+        new_status = request.POST.get('status')
+        if new_status in dict(Invoice.STATUS_CHOICES):
+            invoice.status = new_status
+            invoice.save()
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'invoice_list'
+    return redirect(next_url)
 
 
 @login_required
@@ -447,6 +493,74 @@ def invoice_duplicate(request, pk):
     return redirect('invoice_detail', pk=new_invoice.pk)
 
 
+@login_required
+def invoice_edit(request, pk):
+    invoice = get_object_or_404(Invoice, pk=pk, user=request.user)
+
+    if request.method == "POST":
+        form = InvoiceForm(request.POST, instance=invoice)
+        if form.is_valid():
+            invoice = form.save()
+            invoice.work_entries.all().delete()
+            for i in range(int(request.POST.get('work_entries-TOTAL_FORMS', 0))):
+                work_date = request.POST.get(f'work_entries-{i}-work_date')
+                hours = request.POST.get(f'work_entries-{i}-hours')
+                description = request.POST.get(f'work_entries-{i}-description')
+                if work_date and (hours or description):
+                    WorkEntry.objects.create(
+                        invoice=invoice,
+                        work_date=work_date,
+                        hours=float(hours) if hours else 0.0,
+                        description=description or '',
+                    )
+            messages.success(request, "Invoice updated successfully.")
+            return redirect("invoice_detail", pk=invoice.pk)
+        formset = WorkEntryFormSet()
+        return render(request, "billing/invoice_form.html", {
+            "form": form, "formset": formset,
+            "invoice": invoice, "fixed_employee": invoice.client,
+        })
+
+    import json
+    entries_json = json.dumps({
+        str(e.work_date): {"hours": str(e.hours), "description": e.description}
+        for e in invoice.work_entries.all()
+    })
+    form = InvoiceForm(instance=invoice)
+    formset = WorkEntryFormSet()
+    return render(request, "billing/invoice_form.html", {
+        "form": form, "formset": formset,
+        "invoice": invoice, "fixed_employee": invoice.client,
+        "entries_json": entries_json,
+    })
+
+
+@login_required
+def profile(request):
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    if request.method == 'POST':
+        # Update Django User fields
+        user = request.user
+        user.first_name = request.POST.get('first_name', '').strip()
+        user.last_name = request.POST.get('last_name', '').strip()
+        user.email = request.POST.get('email', '').strip()
+        user.save()
+        # Update UserProfile fields
+        profile_form = UserProfileForm(request.POST, instance=profile)
+        if profile_form.is_valid():
+            profile_form.save()
+            messages.success(request, 'Profile updated successfully.')
+            return redirect('profile')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        profile_form = UserProfileForm(instance=profile)
+    return render(request, 'billing/profile.html', {
+        'profile_form': profile_form,
+        'profile': profile,
+    })
+
+
 # Authentication views
 def login_view(request):
     """
@@ -474,20 +588,13 @@ def logout_view(request):
 
 
 def register_view(request):
-    """
-    Simple registration view.
-    """
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = RegisterForm(request.POST)
         if form.is_valid():
-            form.save()
-            username = form.cleaned_data.get('username')
-            password = form.cleaned_data.get('password1')
-            user = authenticate(username=username, password=password)
-            if user:
-                login(request, user)
-                return redirect('client_list')
+            user = form.save()
+            login(request, user)
+            return redirect('client_list')
     else:
-        form = UserCreationForm()
-    
+        form = RegisterForm()
+
     return render(request, 'billing/register.html', {'form': form})

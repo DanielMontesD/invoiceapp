@@ -16,6 +16,10 @@ venv/
 
 # Local env vars
 .env
+Supabasepwd.txt
+
+# Claude Code
+.claude/
 
 # Static / Media (optional)
 staticfiles/

@@ -5,57 +5,85 @@
   <style>
     @page { size: A4; margin: 20mm; }
     body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 12px; color: #222; }
-    h1 { font-size: 20px; margin: 0 0 10px 0; }
-    .meta, .totals { margin: 10px 0; }
-    .muted { color: #666; }
+    h1 { font-size: 22px; margin: 0 0 4px 0; }
+    .subtitle { font-size: 13px; color: #666; margin-bottom: 20px; }
+    .parties { display: table; width: 100%; margin-bottom: 20px; }
+    .party { display: table-cell; width: 50%; vertical-align: top; }
+    .party-label { font-size: 10px; text-transform: uppercase; color: #888; margin-bottom: 4px; letter-spacing: 1px; }
+    .party-name { font-size: 14px; font-weight: bold; }
+    .party-detail { font-size: 11px; color: #444; }
+    .meta { margin-bottom: 20px; }
+    .meta div { margin-bottom: 3px; }
     table { width: 100%; border-collapse: collapse; margin-top: 12px; }
     th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
     th { background: #f5f5f5; }
     .right { text-align: right; }
     .no-border td { border: none; }
+    .totals { margin-top: 8px; }
   </style>
 </head>
 <body>
-  <h1>Invoice {{ invoice.invoice_number }}</h1>
 
+  <h1>Invoice {{ invoice.invoice_number }}</h1>
+  <div class="subtitle">{{ invoice.period_start }} – {{ invoice.period_end }} &nbsp;·&nbsp; {{ invoice.get_period_type_display }}</div>
+
+  <!-- From / To -->
+  <div class="parties">
+    <div class="party">
+      <div class="party-label">From (Employee)</div>
+      {% if profile and profile.business_name %}
+        <div class="party-name">{{ profile.business_name }}</div>
+      {% else %}
+        <div class="party-name">{{ invoice.user.get_full_name|default:invoice.user.username }}</div>
+      {% endif %}
+      {% if invoice.user.email %}<div class="party-detail">{{ invoice.user.email }}</div>{% endif %}
+      {% if profile and profile.phone %}<div class="party-detail">{{ profile.phone }}</div>{% endif %}
+      {% if profile and profile.address %}<div class="party-detail">{{ profile.address }}</div>{% endif %}
+    </div>
+    <div class="party">
+      <div class="party-label">Employer (Bill To)</div>
+      <div class="party-name">{{ invoice.client.name|default:invoice.client_name }}</div>
+      {% if invoice.client_email %}<div class="party-detail">{{ invoice.client_email }}</div>{% endif %}
+    </div>
+  </div>
+
+  <!-- Invoice meta -->
   <div class="meta">
     <div><strong>Date Issued:</strong> {{ invoice.date_issued }}</div>
-    <div><strong>Period:</strong> {{ invoice.period_start }} – {{ invoice.period_end }}</div>
-    <div><strong>Employee:</strong> {{ invoice.client.name|default:"—" }}</div>
-    {% if invoice.client_email %}<div><strong>Email:</strong> {{ invoice.client_email }}</div>{% endif %}
     <div><strong>Hourly Rate:</strong> ${{ invoice.hourly_rate }}</div>
   </div>
 
+  <!-- Work entries -->
   <table>
     <thead>
       <tr>
-        <th style="width: 16%;">Date</th>
-        <th style="width: 16%;">Weekday</th>
-        <th style="width: 40%;">Description</th>
-        <th style="width: 12%;">Hours</th>
-        <th style="width: 16%;">Amount</th>
+        <th style="width:16%;">Date</th>
+        <th style="width:16%;">Weekday</th>
+        <th style="width:40%;">Description</th>
+        <th style="width:12%;">Hours</th>
+        <th style="width:16%;">Amount</th>
       </tr>
     </thead>
     <tbody>
       {% for e in invoice.work_entries.all %}
       <tr>
         <td>{{ e.work_date|date:"Y-m-d" }}</td>
-        <td>{{ e.work_date|date:"l" }}</td>  {# usa "D" si prefieres abreviado #}
+        <td>{{ e.work_date|date:"l" }}</td>
         <td>{{ e.description }}</td>
         <td class="right">{{ e.hours }}</td>
         <td class="right">${{ e.amount|floatformat:2 }}</td>
       </tr>
       {% empty %}
-      <tr><td colspan="5" class="muted">No work entries</td></tr>
+      <tr><td colspan="5" style="color:#666;">No work entries</td></tr>
       {% endfor %}
     </tbody>
   </table>
 
   <table class="totals">
     <tr class="no-border">
-      <td style="width: 66%;"></td>    <!-- 16 + 16 + 40 = 72% (Date + Weekday + Description) -->
-      <td style="width: 18%;"><strong>Total Hours</strong></td>
-      <td style="width: 16%;" class="right"><strong>{{ invoice.total_hours }}</strong></td>
+      <td style="width:66%;"></td>
+      <td style="width:18%;"><strong>Total Hours</strong></td>
+      <td style="width:16%;" class="right"><strong>{{ invoice.total_hours }}</strong></td>
     </tr>
     <tr class="no-border">
       <td></td>
@@ -65,8 +93,9 @@
   </table>
 
   {% if invoice.notes %}
-    <div><strong>Notes:</strong></div>
+    <div style="margin-top:16px;"><strong>Notes:</strong></div>
     <p>{{ invoice.notes|linebreaksbr }}</p>
   {% endif %}
+
 </body>
 </html>

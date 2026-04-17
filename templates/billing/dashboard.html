@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1>Dashboard</h1>
+  <button class="btn btn-outline-secondary" type="button" id="filters-toggle">
+    <i class="fas fa-sliders-h"></i> Filters
+    {% if selected_ids or date_from or date_to %}
+      <span class="badge bg-primary ms-1">{{ selected_ids|length|add:0 }}{% if date_from or date_to %}{% if selected_ids %}+{% endif %}date{% endif %}</span>
+    {% endif %}
+  </button>
+</div>
+
+<!-- Filter panel -->
+<div id="filter-panel" style="display:{% if selected_ids or date_from or date_to %}block{% else %}none{% endif %};" class="card mb-4">
+  <div class="card-body">
+    <form method="get" id="filter-form">
+      <div class="row g-3 align-items-end">
+
+        <!-- Client dropdown -->
+        <div class="col-md-4">
+          <label class="form-label" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--color-muted);">Client</label>
+          <div class="dropdown w-100">
+            <button type="button" class="form-select text-start d-flex justify-content-between align-items-center"
+                    data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+              <span id="client-label">{% if selected_ids %}{{ selected_ids|length }} selected{% else %}All clients{% endif %}</span>
+              <i class="fas fa-chevron-down" style="font-size:11px;"></i>
+            </button>
+            <ul class="dropdown-menu w-100 p-2" style="max-height:220px;overflow-y:auto;">
+              {% for client in all_clients %}
+              <li>
+                <label class="dropdown-item d-flex align-items-center gap-2" style="cursor:pointer;">
+                  <input type="checkbox" name="clients" value="{{ client.pk }}"
+                    {% if client.pk in selected_ids %}checked{% endif %}
+                    onchange="updateClientLabel()">
+                  {{ client.name }}
+                </label>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+
+        <!-- Date from -->
+        <div class="col-md-3">
+          <label class="form-label" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--color-muted);">From</label>
+          <input type="date" class="form-control" name="date_from" value="{{ date_from }}">
+        </div>
+
+        <!-- Date to -->
+        <div class="col-md-3">
+          <label class="form-label" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--color-muted);">To</label>
+          <input type="date" class="form-control" name="date_to" value="{{ date_to }}">
+        </div>
+
+        <!-- Actions -->
+        <div class="col-md-2 d-flex gap-2">
+          <button type="submit" class="btn btn-primary w-100">Apply</button>
+          {% if selected_ids or date_from or date_to %}
+          <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary" title="Clear filters">✕</a>
+          {% endif %}
+        </div>
+
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Stats row -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="card text-center h-100">
+      <div class="card-body">
+        <div class="fs-1 fw-bold text-success">${{ total_earned|floatformat:2 }}</div>
+        <div class="text-muted">Total Earned</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card text-center h-100">
+      <div class="card-body">
+        <div class="fs-1 fw-bold text-warning">${{ pending_amount|floatformat:2 }}</div>
+        <div class="text-muted">Pending Payment</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card text-center h-100">
+      <div class="card-body">
+        <div class="fs-1 fw-bold text-primary">{{ total_invoices }}</div>
+        <div class="text-muted">Total Invoices</div>
+        <div class="mt-2 small">
+          <span class="badge bg-warning text-dark">{{ draft_count }} Draft</span>
+          <span class="badge bg-primary">{{ sent_count }} Sent</span>
+          <span class="badge bg-success">{{ paid_count }} Paid</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card text-center h-100">
+      <div class="card-body">
+        <div class="fs-1 fw-bold text-info">{{ active_clients }}</div>
+        <div class="text-muted">Active Clients</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent invoices -->
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0"><i class="fas fa-file-invoice"></i> Recent Invoices</h5>
+    <a href="{% url 'invoice_list' %}" class="btn btn-sm btn-outline-secondary">View All</a>
+  </div>
+  {% if recent_invoices %}
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Invoice #</th>
+          <th>Client</th>
+          <th>Period</th>
+          <th>Status</th>
+          <th class="text-end">Amount</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inv in recent_invoices %}
+        <tr>
+          <td><a href="{% url 'invoice_detail' inv.pk %}" style="color:var(--color-accent);text-decoration:none;font-weight:500;">{{ inv.invoice_number }}</a></td>
+          <td>{{ inv.client_name|default:"—" }}</td>
+          <td style="color:var(--color-muted);font-size:13px;">{{ inv.period_start|date:"M d" }} – {{ inv.period_end|date:"M d, Y" }}</td>
+          <td>
+            <form method="post" action="{% url 'invoice_change_status' inv.pk %}" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.path }}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}">
+              <select name="status" onchange="this.form.submit()" class="status-select">
+                <option value="draft"   {% if inv.status == 'draft'   %}selected{% endif %}>Draft</option>
+                <option value="sent"    {% if inv.status == 'sent'    %}selected{% endif %}>Sent</option>
+                <option value="overdue" {% if inv.status == 'overdue' %}selected{% endif %}>Overdue</option>
+                <option value="paid"    {% if inv.status == 'paid'    %}selected{% endif %}>Paid</option>
+              </select>
+            </form>
+          </td>
+          <td class="text-end" style="font-weight:500;">${{ inv.total_amount|floatformat:2 }}</td>
+          <td>
+            <div class="d-flex gap-1 justify-content-end">
+              <a href="{% url 'invoice_detail' inv.pk %}" class="btn btn-sm btn-outline-secondary">View</a>
+              <a href="{% url 'invoice_edit' inv.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="card-body text-center py-5 text-muted">
+      <i class="fas fa-file-invoice fa-2x mb-3 d-block"></i>
+      <p>No invoices found{% if selected_ids or date_from or date_to %} for the selected filters{% endif %}.</p>
+      {% if not selected_ids and not date_from and not date_to %}
+        <a href="{% url 'client_list' %}" class="btn btn-primary">Go to Clients</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+
+<script>
+document.getElementById('filters-toggle').addEventListener('click', function() {
+  const panel = document.getElementById('filter-panel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+});
+
+function updateClientLabel() {
+  const checked = document.querySelectorAll('input[name="clients"]:checked');
+  document.getElementById('client-label').textContent =
+    checked.length === 0 ? 'All clients' : checked.length + ' selected';
+}
+</script>
+
+{% endblock %}
