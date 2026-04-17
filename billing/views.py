@@ -209,7 +209,7 @@ def employee_detail(request, pk):
     """
     Display client details and their associated invoices.
     """
-    client = get_object_or_404(Client, pk=pk)
+    client = get_object_or_404(Client, pk=pk, user=request.user)
     invoices = client.invoices.all().order_by("-id")
     return render(
         request,
