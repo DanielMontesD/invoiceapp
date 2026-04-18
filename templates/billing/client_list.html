@@ -41,13 +41,13 @@
             <span class="badge bg-secondary ms-2">Inactive</span>
           {% endif %}
           {% if client.email %}
-            <div class="text-muted" style="font-size:13px;">{{ client.email }} · ${{ client.default_hourly_rate }}/hr</div>
+            <div class="text-muted" style="font-size:13px;word-break:break-word;">{{ client.email }} · ${{ client.default_hourly_rate }}/hr</div>
           {% else %}
             <div class="text-muted" style="font-size:13px;">${{ client.default_hourly_rate }}/hr</div>
           {% endif %}
         </div>
       </div>
-      <div class="d-flex gap-2 flex-shrink-0">
+      <div class="d-flex gap-2 flex-wrap">
         <a href="{% url 'invoice_create_for_client' client.pk %}" class="btn btn-sm btn-primary">+ Invoice</a>
         <a href="{% url 'client_detail' client.pk %}" class="btn btn-sm btn-outline-secondary">View</a>
         <a href="{% url 'client_edit' client.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
@@ -61,7 +61,7 @@
         <thead>
           <tr>
             <th>Invoice #</th>
-            <th>Period</th>
+            <th class="d-none d-sm-table-cell">Period</th>
             <th>Status</th>
             <th class="text-end">Amount</th>
             <th></th>
@@ -71,7 +71,7 @@
           {% for invoice in client.recent_invoices %}
           <tr>
             <td><a href="{% url 'invoice_detail' invoice.pk %}" style="color:var(--color-accent);text-decoration:none;font-weight:500;">{{ invoice.invoice_number }}</a></td>
-            <td style="color:var(--color-muted);font-size:13px;">{{ invoice.period_start|date:"M d" }} – {{ invoice.period_end|date:"M d, Y" }}</td>
+            <td class="d-none d-sm-table-cell" style="color:var(--color-muted);font-size:13px;">{{ invoice.period_start|date:"M d" }} – {{ invoice.period_end|date:"M d, Y" }}</td>
             <td>
               <form method="post" action="{% url 'invoice_change_status' invoice.pk %}" style="display:inline;">
                 {% csrf_token %}

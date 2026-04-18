@@ -4,104 +4,72 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h4 class="mb-0"><i class="fas fa-user"></i> {{ title }}</h4>
-                </div>
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
-                        
-                        <!-- Display form errors -->
-                        {% if form.non_field_errors %}
-                            <div class="alert alert-danger">
-                                {{ form.non_field_errors }}
-                            </div>
-                        {% endif %}
 
-                        <div class="row">
-                            <!-- Name Field -->
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.name.id_for_label }}" class="form-label">
-                                    {{ form.name.label }}
-                                    <span class="text-danger">*</span>
-                                </label>
-                                {{ form.name }}
-                                {% if form.name.errors %}
-                                    <div class="text-danger small mt-1">
-                                        {% for error in form.name.errors %}
-                                            <div>{{ error }}</div>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
+<div class="page-header">
+  <h1>{{ title }}</h1>
+</div>
 
-                            <!-- Email Field -->
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.email.id_for_label }}" class="form-label">
-                                    {{ form.email.label }}
-                                </label>
-                                {{ form.email }}
-                                {% if form.email.errors %}
-                                    <div class="text-danger small mt-1">
-                                        {% for error in form.email.errors %}
-                                            <div>{{ error }}</div>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-9">
+    <div class="card">
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
 
-                        <div class="row">
-                            <!-- Hourly Rate Field -->
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.default_hourly_rate.id_for_label }}" class="form-label">
-                                    {{ form.default_hourly_rate.label }}
-                                    <span class="text-danger">*</span>
-                                </label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    {{ form.default_hourly_rate }}
-                                </div>
-                                {% if form.default_hourly_rate.errors %}
-                                    <div class="text-danger small mt-1">
-                                        {% for error in form.default_hourly_rate.errors %}
-                                            <div>{{ error }}</div>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+          {% endif %}
 
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Client Status</label>
-                                <div class="form-check form-switch mt-1">
-                                    {{ form.is_active }}
-                                    <label class="form-check-label fw-semibold" for="{{ form.is_active.id_for_label }}" id="status-label">
-                                        {% if form.is_active.value %}Active{% else %}Inactive{% endif %}
-                                    </label>
-                                </div>
-                                <div class="text-muted small mt-1">Inactive clients are hidden from your client list.</div>
-                            </div>
-                        </div>
-
-                        <!-- Form Actions -->
-                        <div class="d-flex justify-content-between">
-                            <a href="{% if client %}{% url 'client_detail' client.pk %}{% else %}{% url 'client_list' %}{% endif %}" 
-                               class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Cancel
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> {{ submit_text }}
-                            </button>
-                        </div>
-                    </form>
-                </div>
+          <div class="row g-3">
+            <div class="col-12 col-sm-6">
+              <label for="{{ form.name.id_for_label }}" class="form-label">
+                {{ form.name.label }} <span class="text-danger">*</span>
+              </label>
+              {{ form.name }}
+              {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors }}</div>{% endif %}
             </div>
-        </div>
+
+            <div class="col-12 col-sm-6">
+              <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
+              {{ form.email }}
+              {% if form.email.errors %}<div class="text-danger small mt-1">{{ form.email.errors }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label for="{{ form.default_hourly_rate.id_for_label }}" class="form-label">
+                {{ form.default_hourly_rate.label }} <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                {{ form.default_hourly_rate }}
+              </div>
+              {% if form.default_hourly_rate.errors %}<div class="text-danger small mt-1">{{ form.default_hourly_rate.errors }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label">Client Status</label>
+              <div class="form-check form-switch mt-1">
+                {{ form.is_active }}
+                <label class="form-check-label fw-semibold" for="{{ form.is_active.id_for_label }}" id="status-label">
+                  {% if form.is_active.value %}Active{% else %}Inactive{% endif %}
+                </label>
+              </div>
+              <div class="text-muted small mt-1">Inactive clients are hidden from your client list.</div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between flex-wrap gap-2 mt-4">
+            <a href="{% if client %}{% url 'client_detail' client.pk %}{% else %}{% url 'client_list' %}{% endif %}" class="btn btn-outline-secondary">
+              <i class="fas fa-arrow-left"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save"></i> {{ submit_text }}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
+  </div>
 </div>
 
 <script>

@@ -13,7 +13,7 @@
     <p class="text-muted mb-0" style="font-size:14px;">{{ invoice.period_start|date:"M d" }} – {{ invoice.period_end|date:"M d, Y" }} · {{ invoice.get_period_type_display }}</p>
   </div>
   <div class="d-flex gap-2 flex-wrap">
-    <a class="btn btn-outline-secondary" href="{% url 'invoice_pdf' invoice.pk %}"><i class="fas fa-arrow-down"></i> Download PDF</a>
+    <a class="btn btn-primary" href="{% url 'invoice_pdf' invoice.pk %}"><i class="fas fa-arrow-down"></i> Download PDF</a>
     <a class="btn btn-outline-secondary" href="{% url 'invoice_edit' invoice.pk %}"><i class="fas fa-pencil-alt"></i> Edit</a>
     <a class="btn btn-outline-secondary" href="{% url 'invoice_duplicate' invoice.pk %}"><i class="fas fa-copy"></i> Duplicate</a>
   </div>
@@ -21,8 +21,8 @@
 
 <div class="row g-4">
 
-  <!-- Left: work entries -->
-  <div class="col-lg-8">
+  <!-- Left: work entries (appears after summary on mobile) -->
+  <div class="col-lg-8 order-lg-1 order-2">
     <div class="card">
       <div class="card-header">Work Entries</div>
       <div class="table-responsive">
@@ -30,7 +30,7 @@
         <thead>
           <tr>
             <th>Date</th>
-            <th>Day</th>
+            <th class="d-none d-sm-table-cell">Day</th>
             <th>Description</th>
             <th class="text-end">Hours</th>
             <th class="text-end">Amount</th>
@@ -40,18 +40,21 @@
           {% for e in invoice.work_entries.all %}
           <tr>
             <td>{{ e.work_date|date:"M d, Y" }}</td>
-            <td style="color:var(--color-muted);">{{ e.work_date|date:"l" }}</td>
+            <td class="d-none d-sm-table-cell" style="color:var(--color-muted);">{{ e.work_date|date:"l" }}</td>
             <td>{{ e.description|default:"—" }}</td>
             <td class="text-end">{{ e.hours }}</td>
             <td class="text-end">${{ e.amount|floatformat:2 }}</td>
           </tr>
           {% empty %}
-          <tr><td colspan="5" class="text-muted text-center py-4">No work entries.</td></tr>
+          <tr class="d-sm-none"><td colspan="4" class="text-muted text-center py-4">No work entries.</td></tr>
+          <tr class="d-none d-sm-table-row"><td colspan="5" class="text-muted text-center py-4">No work entries.</td></tr>
           {% endfor %}
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="3"></td>
+            <td></td>
+            <td class="d-none d-sm-table-cell"></td>
+            <td></td>
             <td class="text-end" style="font-weight:600;border-top:2px solid var(--color-border);">{{ invoice.total_hours }}h</td>
             <td class="text-end" style="font-weight:600;border-top:2px solid var(--color-border);">${{ invoice.total_amount|floatformat:2 }}</td>
           </tr>
@@ -68,8 +71,8 @@
     {% endif %}
   </div>
 
-  <!-- Right: details -->
-  <div class="col-lg-4">
+  <!-- Right: details (appears first on mobile) -->
+  <div class="col-lg-4 order-lg-2 order-1">
     <div class="card">
       <div class="card-body">
         <div class="mb-3">

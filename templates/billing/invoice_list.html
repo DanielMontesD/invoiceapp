@@ -44,7 +44,7 @@
           <td style="font-weight:500;">${{ inv.total_amount|floatformat:2 }}</td>
           <td class="d-none d-md-table-cell" style="color:var(--color-muted);">{{ inv.date_issued|date:"M d, Y" }}</td>
           <td>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 flex-wrap">
               <a href="{% url 'invoice_detail' inv.pk %}" class="btn btn-sm btn-outline-secondary">View</a>
               <a href="{% url 'invoice_edit' inv.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
             </div>

@@ -65,7 +65,12 @@ class WorkEntryForm(forms.ModelForm):
         widgets = {
             "work_date": forms.DateInput(attrs={"type": "date"}),
         }
-    
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.update({"class": "form-control"})
+
     def clean(self):
         # Don't validate anything - let the view handle the logic
         return super().clean()

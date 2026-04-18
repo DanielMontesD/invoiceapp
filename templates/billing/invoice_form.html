@@ -74,7 +74,7 @@
           <thead>
             <tr>
               <th>Date</th>
-              <th>Day</th>
+              <th class="d-none d-sm-table-cell">Day</th>
               <th>Hours</th>
               <th>Description</th>
             </tr>
@@ -84,7 +84,7 @@
               {% for f in formset.forms %}
                 <tr class="form-row">
                   <td>{{ f.work_date }}</td>
-                  <td class="text-muted" style="font-size:13px;min-width:90px;">{% if f.work_date.value %}{{ f.work_date.value|date:"l" }}{% endif %}</td>
+                  <td class="d-none d-sm-table-cell text-muted" style="font-size:13px;min-width:90px;">{% if f.work_date.value %}{{ f.work_date.value|date:"l" }}{% endif %}</td>
                   <td>{{ f.hours }}</td>
                   <td>{{ f.description }}</td>
                 </tr>
@@ -98,7 +98,7 @@
         <template id="empty-row">
           <tr class="form-row">
             <td>{{ formset.empty_form.work_date }}</td>
-            <td class="text-muted" style="font-size:13px;min-width:90px;"></td>
+            <td class="d-none d-sm-table-cell text-muted" style="font-size:13px;min-width:90px;"></td>
             <td>{{ formset.empty_form.hours }}</td>
             <td>{{ formset.empty_form.description }}</td>
           </tr>

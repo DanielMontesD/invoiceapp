@@ -43,20 +43,20 @@
         </div>
 
         <!-- Date from -->
-        <div class="col-md-3">
+        <div class="col-6 col-md-3">
           <label class="form-label" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--color-muted);">From</label>
           <input type="date" class="form-control" name="date_from" value="{{ date_from }}">
         </div>
 
         <!-- Date to -->
-        <div class="col-md-3">
+        <div class="col-6 col-md-3">
           <label class="form-label" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--color-muted);">To</label>
           <input type="date" class="form-control" name="date_to" value="{{ date_to }}">
         </div>
 
         <!-- Actions -->
-        <div class="col-md-2 d-flex gap-2">
-          <button type="submit" class="btn btn-primary w-100">Apply</button>
+        <div class="col-12 col-md-2 d-flex gap-2">
+          <button type="submit" class="btn btn-primary flex-grow-1">Apply</button>
           {% if selected_ids or date_from or date_to %}
           <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary" title="Clear filters">✕</a>
           {% endif %}
@@ -147,7 +147,7 @@
           </td>
           <td class="text-end" style="font-weight:500;">${{ inv.total_amount|floatformat:2 }}</td>
           <td>
-            <div class="d-flex gap-1 justify-content-end">
+            <div class="d-flex gap-1 justify-content-end flex-wrap">
               <a href="{% url 'invoice_detail' inv.pk %}" class="btn btn-sm btn-outline-secondary">View</a>
               <a href="{% url 'invoice_edit' inv.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
             </div>
@@ -156,6 +156,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   {% else %}
     <div class="card-body text-center py-5 text-muted">
       <i class="fas fa-file-invoice fa-2x mb-3 d-block"></i>
