@@ -19,11 +19,6 @@ urlpatterns = [
     path("clients/<int:pk>/delete/", views.client_delete, name="client_delete"),
     path("clients/<int:pk>/invoices/new/", views.invoice_create_for_employee, name="invoice_create_for_client"),
     
-    # Legacy employee URLs (for backward compatibility)
-    path("employees/", views.employee_list, name="employee_list"),
-    path("employees/<int:pk>/", views.employee_detail, name="employee_detail"),
-    path("employees/<int:pk>/invoices/new/", views.invoice_create_for_employee, name="invoice_create_for_employee"),
-    
     # Invoice management
     path("invoices/", views.invoice_list, name="invoice_list"),
     path("invoices/new/", views.invoice_create, name="invoice_create"),

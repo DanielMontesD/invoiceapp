@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import timedelta
 
 from django.contrib import messages
 from django.db.models import Q
@@ -194,30 +194,6 @@ def client_delete(request, pk):
     })
 
 
-# --- Legacy employee list view (for backward compatibility) ---
-@login_required
-def employee_list(request):
-    """
-    Legacy view - redirects to client_list for backward compatibility.
-    """
-    return redirect("client_list")
-
-
-# --- Client detail view ---
-@login_required
-def employee_detail(request, pk):
-    """
-    Display client details and their associated invoices.
-    """
-    client = get_object_or_404(Client, pk=pk, user=request.user)
-    invoices = client.invoices.all().order_by("-id")
-    return render(
-        request,
-        "billing/employee_detail.html",
-        {"employee": client, "invoices": invoices},  # Keep 'employee' for template compatibility
-    )
-
-
 # --- Create invoice for specific client ---
 @login_required
 def invoice_create_for_employee(request, pk):
@@ -291,10 +267,6 @@ def invoice_create_for_employee(request, pk):
             "hourly_rate": client.default_hourly_rate,  # Client's default rate
         }
     )
-    # Disable the client selector to prevent changing clients
-    if "client" in form.fields:
-        form.fields["client"].disabled = True
-
     formset = WorkEntryFormSet()  # filas las genera el JS del template
 
     return render(
@@ -315,17 +287,6 @@ def invoice_list(request):
 def invoice_detail(request, pk):
     invoice = get_object_or_404(Invoice, pk=pk, user=request.user)
     return render(request, "billing/invoice_detail.html", {"invoice": invoice})
-
-
-def daterange(start_d: date, end_d: date):
-    """Yield dates from start_d to end_d inclusive."""
-    for n in range((end_d - start_d).days + 1):
-        yield start_d + timedelta(days=n)
-
-
-def monday_of(d: date) -> date:
-    """Return Monday of the week of date d (Monday=0)."""
-    return d - timedelta(days=d.weekday())
 
 
 @login_required

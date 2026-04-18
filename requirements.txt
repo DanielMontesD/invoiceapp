@@ -8,10 +8,8 @@ cryptography==45.0.7
 cssselect2==0.8.0
 Django==4.2.23
 gunicorn==23.0.0
-pypdf==6.5.0
 python-bidi==0.5.0
 python-decouple==3.8
-PyYAML==6.0.2
 reportlab==4.4.3
 requests==2.32.5
 six==1.17.0
